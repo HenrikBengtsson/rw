@@ -1,7 +1,7 @@
 Package: rwasm.extras
 Version: 0.0.0-9000
 Authors@R: c(person("Henrik", "Bengtsson", role=c("aut", "cre", "cph"), email="henrikb@braju.com"))
-Title: R 'WebAssembly' ('WASM') Utility Functions
+Title: R 'WebAssembly' (R 'Wasm') Utility Functions
 Description: Extensions to the 'rwasm' and 'webR' ecosystems.
 SystemRequirements: node (>= 17.0.0)
 License: GPL (>= 3)

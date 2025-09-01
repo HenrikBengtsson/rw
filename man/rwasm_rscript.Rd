@@ -2,7 +2,7 @@
 % Please edit documentation in R/node.R
 \name{rwasm_rscript}
 \alias{rwasm_rscript}
-\title{Execute code in R WebAssembly (WASM)}
+\title{Execute code in R WebAssembly (Wasm)}
 \usage{
 rwasm_rscript(file = NULL, code = NULL)
 }
@@ -12,14 +12,20 @@ rwasm_rscript(file = NULL, code = NULL)
 \item{code}{(character vector) R code.}
 }
 \value{
-The captured output (standard output and standard error).
+The captured output (standard output and standard error) as a
+character string.
 }
 \description{
-Execute code in R WebAssembly (WASM)
+Execute code in R WebAssembly (Wasm)
 }
 \examples{
 \dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-out <- rwasm_rscript(code = "sessionInfo()")
-writeLines(out)
+# Prove that we are running within R Wasm
+out <- rwasm_rscript(code = 'sessionInfo()')
+cat(out)
+
+# Note that R Wasm has internet access by default
+out <- rwasm_rscript(code = 'writeLines(readLines("https://ipinfo.io/json", warn = FALSE))')
+cat(out)
 \dontshow{\}) # examplesIf}
 }

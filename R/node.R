@@ -99,18 +99,24 @@ install_rwasm_rscript <- function(path = node_path()) {
 }
 
 
-#' Execute code in R WebAssembly (WASM)
+#' Execute code in R WebAssembly (Wasm)
 #' 
 #' @param file (character string) An R script.
 #'
 #' @param code (character vector) R code.
 #'
 #' @return
-#' The captured output (standard output and standard error).
+#' The captured output (standard output and standard error) as a
+#' character string.
 #'
 #' @examplesIf interactive()
-#' out <- rwasm_rscript(code = "sessionInfo()")
-#' writeLines(out)
+#' # Prove that we are running within R Wasm
+#' out <- rwasm_rscript(code = 'sessionInfo()')
+#' cat(out)
+#'
+#' # Note that R Wasm has internet access by default
+#' out <- rwasm_rscript(code = 'writeLines(readLines("https://ipinfo.io/json", warn = FALSE))')
+#' cat(out)
 #'
 #' @importFrom utils file_test
 #' @export
@@ -131,10 +137,12 @@ rwasm_rscript <- function(file = NULL, code = NULL) {
   }
   
   out <- system2(bin, args = c(file), stdout = TRUE, stderr = TRUE)
+  out <- paste(out, collapse = "\n")
   status <- attr(out, "status")
   if (!is.null(status)) {
-    msg <- sprintf("'rwasm_rscript' failed with exit code %d. The capture output was:\n%s\n", paste(args, collapse = " "), status, paste(out, collapse = "\n"))
+    msg <- sprintf("'rwasm_rscript' failed with exit code %d. The capture output was:\n%s\n", paste(args, collapse = " "), status, out)
     stop(msg)
   }
+
   out
 }
