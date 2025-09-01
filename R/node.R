@@ -101,19 +101,35 @@ install_rwasm_rscript <- function(path = node_path()) {
 
 #' Execute code in R WebAssembly (WASM)
 #' 
-#' @param code (character vector) R code to be evaluated in R WASM.
+#' @param file (character string) An R script.
+#'
+#' @param code (character vector) R code.
 #'
 #' @return
 #' The captured output (standard output and standard error).
 #'
+#' @examplesIf interactive()
+#' out <- rwasm_rscript(code = "sessionInfo()")
+#' writeLines(out)
+#'
 #' @importFrom utils file_test
 #' @export
-rwasm_rscript <- function(code) {
+rwasm_rscript <- function(file = NULL, code = NULL) {
+  if (is.null(file) && is.null(code)) {
+    stop("Either argument 'file' or 'code' must be specified")
+  } else if (!is.null(file) && !file_test("-f", file)) {
+    stop("Argument 'file' specified a non-existing file: ", sQuote(file))
+  }
+  
   bin <- get_rwasm_rscript(must_work = FALSE)
   if (!file_test("-x", bin)) bin <- install_rwasm_rscript()
-  file <- tempfile(pattern = "rwasm_extras_", fileext = ".R")
-  on.exit(file.remove(file))
-  writeLines(code, con = file)
+
+  if (is.null(file)) {
+    file <- tempfile(pattern = "rwasm_extras_", fileext = ".R")
+    on.exit(file.remove(file))
+    writeLines(code, con = file)
+  }
+  
   out <- system2(bin, args = c(file), stdout = TRUE, stderr = TRUE)
   status <- attr(out, "status")
   if (!is.null(status)) {

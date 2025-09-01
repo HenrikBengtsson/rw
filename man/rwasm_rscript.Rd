@@ -4,14 +4,22 @@
 \alias{rwasm_rscript}
 \title{Execute code in R WebAssembly (WASM)}
 \usage{
-rwasm_rscript(code)
+rwasm_rscript(file = NULL, code = NULL)
 }
 \arguments{
-\item{code}{(character vector) R code to be evaluated in R WASM.}
+\item{file}{(character string) An R script.}
+
+\item{code}{(character vector) R code.}
 }
 \value{
 The captured output (standard output and standard error).
 }
 \description{
 Execute code in R WebAssembly (WASM)
+}
+\examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+out <- rwasm_rscript(code = "sessionInfo()")
+writeLines(out)
+\dontshow{\}) # examplesIf}
 }
