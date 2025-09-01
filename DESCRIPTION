@@ -1,0 +1,8 @@
+Package: rwasm.extras
+Version: 0.0.0-9000
+Authors@R: c(person("Henrik", "Bengtsson", role=c("aut", "cre", "cph"), email="henrikb@braju.com"))
+Title: R 'WebAssembly' ('WASM') Utility Functions
+Description: Extensions to the 'rwasm' and 'webR' ecosystems.
+License: GPL (>= 3)
+RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
