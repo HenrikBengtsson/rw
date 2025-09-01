@@ -22,10 +22,10 @@ Execute code in R WebAssembly (Wasm)
 \dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 # Prove that we are running within R Wasm
 out <- rwasm_rscript(code = 'sessionInfo()')
-cat(out)
+writeLines(out)
 
 # Note that R Wasm has internet access by default
 out <- rwasm_rscript(code = 'writeLines(readLines("https://ipinfo.io/json", warn = FALSE))')
-cat(out)
+writeLines(out)
 \dontshow{\}) # examplesIf}
 }
