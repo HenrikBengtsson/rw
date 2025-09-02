@@ -5,7 +5,10 @@
 #' @param code (character vector) R code.
 #'
 #' @param libs (character string; optional) The path to an R user library
-#' of Emscripten packages binary.
+#' of Emscripten packages binary mounted as read-write in Rwasm.
+#
+#' @param shared (character string; optional) The path to a directory
+#' mounted read-write as `./shared/` to Rwasm.
 #
 #' @return
 #' The captured output (standard output and standard error) as a
@@ -22,7 +25,7 @@
 #'
 #' @importFrom utils file_test
 #' @export
-rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL) {
+rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL, shared = NULL) {
   if (is.null(file) && is.null(code)) {
     stop("Either argument 'file' or 'code' must be specified")
   } else if (!is.null(file) && !file_test("-f", file)) {
@@ -36,7 +39,15 @@ rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL) {
     }
     libs <- normalizePath(libs, mustWork = TRUE)
   }
-    
+
+  stopifnot(is.null(shared) || is.character(shared) && length(shared) == 1L)
+  if (is.character(shared)) {
+    if (!file_test("-d", shared)) {
+      stop("Argument 'shared' specifies a non-existing directory: ", sQuote(shared))
+    }
+    shared <- normalizePath(shared, mustWork = TRUE)
+  }
+
   bin <- get_rwasm_rscript(must_work = FALSE)
   if (!file_test("-x", bin)) bin <- install_rwasm_rscript()
 
@@ -50,7 +61,9 @@ rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL) {
   if (is.character(libs)) {
     args <- c(args, sprintf("--r-libs=%s", shQuote(libs)))
   }
-  args <- c(args, "--debug")
+  if (is.character(shared)) {
+    args <- c(args, sprintf("--shared=%s", shQuote(shared)))
+  }
 
   out <- system2(bin, args = args, stdout = TRUE, stderr = TRUE)
   out <- paste(out, collapse = "\n")

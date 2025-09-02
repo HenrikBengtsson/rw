@@ -4,7 +4,7 @@
 \alias{rwasm_rscript}
 \title{Execute code in R WebAssembly (Wasm)}
 \usage{
-rwasm_rscript(file = NULL, code = NULL, libs = NULL)
+rwasm_rscript(file = NULL, code = NULL, libs = NULL, shared = NULL)
 }
 \arguments{
 \item{file}{(character string) An R script.}
@@ -12,7 +12,10 @@ rwasm_rscript(file = NULL, code = NULL, libs = NULL)
 \item{code}{(character vector) R code.}
 
 \item{libs}{(character string; optional) The path to an R user library
-of Emscripten packages binary.}
+of Emscripten packages binary mounted as read-write in Rwasm.}
+
+\item{shared}{(character string; optional) The path to a directory
+mounted read-write as \verb{./shared/} to Rwasm.}
 }
 \value{
 The captured output (standard output and standard error) as a
