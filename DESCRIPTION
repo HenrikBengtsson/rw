@@ -5,5 +5,7 @@ Title: R 'WebAssembly' (R 'Wasm') Utility Functions
 Description: Extensions to the 'rwasm' and 'webR' ecosystems.
 SystemRequirements: node (>= 17.0.0)
 License: GPL (>= 3)
+Language: en-US
+Encoding: UTF-8
 RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)
