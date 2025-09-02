@@ -4,10 +4,18 @@
 \alias{rwasm_eval_future}
 \title{Evaluates a future in R WebAssembly (Wasm)}
 \usage{
-rwasm_eval_future(future, libs = NULL, shared = tempdir())
+rwasm_eval_future(future, libs = NULL, shared = NULL, debug = FALSE)
 }
 \arguments{
 \item{future}{A \link[future:Future-class]{future::Future} object.}
+
+\item{libs}{(character string; optional) The path to an R user library
+of Emscripten packages binary mounted as read-write in Rwasm.}
+
+\item{shared}{(character string; optional) The path to a directory
+mounted read-write as \verb{./shared/} to Rwasm.}
+
+\item{debug}{(logical) If TRUE, RWasm outputs debug messages.}
 }
 \value{
 A \link[future:FutureResult]{future::FutureResult} object.

@@ -10,6 +10,8 @@
 #' @param shared (character string; optional) The path to a directory
 #' mounted read-write as `./shared/` to Rwasm.
 #
+#' @param debug (logical) If TRUE, RWasm outputs debug messages.
+#'
 #' @return
 #' The captured output (standard output and standard error) as a
 #' character string.
@@ -25,7 +27,7 @@
 #'
 #' @importFrom utils file_test
 #' @export
-rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL, shared = NULL) {
+rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL, shared = NULL, debug = FALSE) {
   if (is.null(file) && is.null(code)) {
     stop("Either argument 'file' or 'code' must be specified")
   } else if (!is.null(file) && !file_test("-f", file)) {
@@ -48,6 +50,8 @@ rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL, shared = NULL) 
     shared <- normalizePath(shared, mustWork = TRUE)
   }
 
+  stopifnot(is.logical(debug), length(debug) == 1L, !is.na(debug))
+
   bin <- get_rwasm_rscript(must_work = FALSE)
   if (!file_test("-x", bin)) bin <- install_rwasm_rscript()
 
@@ -57,13 +61,17 @@ rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL, shared = NULL) 
     writeLines(code, con = file)
   }
 
-  args <- c(file)
+  args <- character(0L)
+  if (isTRUE(debug)) {
+    args <- c(args, "--debug")
+  }
   if (is.character(libs)) {
     args <- c(args, sprintf("--r-libs=%s", shQuote(libs)))
   }
   if (is.character(shared)) {
     args <- c(args, sprintf("--shared=%s", shQuote(shared)))
   }
+  args <- c(args, file)
 
   out <- system2(bin, args = args, stdout = TRUE, stderr = TRUE)
   out <- paste(out, collapse = "\n")

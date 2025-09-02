@@ -2,4 +2,5 @@
 
 export(rwasm_eval_future)
 export(rwasm_rscript)
+importFrom(tools,file_path_sans_ext)
 importFrom(utils,file_test)
