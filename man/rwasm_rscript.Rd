@@ -4,12 +4,15 @@
 \alias{rwasm_rscript}
 \title{Execute code in R WebAssembly (Wasm)}
 \usage{
-rwasm_rscript(file = NULL, code = NULL)
+rwasm_rscript(file = NULL, code = NULL, libs = NULL)
 }
 \arguments{
 \item{file}{(character string) An R script.}
 
 \item{code}{(character vector) R code.}
+
+\item{libs}{(character string; optional) The path to an R user library
+of Emscripten packages binary.}
 }
 \value{
 The captured output (standard output and standard error) as a

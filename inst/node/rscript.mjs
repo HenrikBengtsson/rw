@@ -46,11 +46,13 @@ for (const arg of args) {
     debug = true;        
   } else if (arg.startsWith("--r-libs=")) {
     r_libs_host = arg.split("=")[1];
+    if (!path.isAbsolute(r_libs_host)) {
+      r_libs_host = path.join(__dirname, r_libs_host);
+    }
     if (!fs.existsSync(r_libs_host)) {
       console.error("ERROR: No such directory:", r_libs_host);
       process.exit(1);
     }
-    r_libs_host = path.join(__dirname, r_libs_host);
   } else if (arg.startsWith("--shared=")) {
     r_shared_host = arg.split("=")[1];
     if (!fs.existsSync(r_shared_host)) {

@@ -4,6 +4,9 @@
 #'
 #' @param code (character vector) R code.
 #'
+#' @param libs (character string; optional) The path to an R user library
+#' of Emscripten packages binary.
+#
 #' @return
 #' The captured output (standard output and standard error) as a
 #' character string.
@@ -19,13 +22,21 @@
 #'
 #' @importFrom utils file_test
 #' @export
-rwasm_rscript <- function(file = NULL, code = NULL) {
+rwasm_rscript <- function(file = NULL, code = NULL, libs = NULL) {
   if (is.null(file) && is.null(code)) {
     stop("Either argument 'file' or 'code' must be specified")
   } else if (!is.null(file) && !file_test("-f", file)) {
-    stop("Argument 'file' specified a non-existing file: ", sQuote(file))
+    stop("Argument 'file' specifies a non-existing file: ", sQuote(file))
   }
-  
+
+  stopifnot(is.null(libs) || is.character(libs) && length(libs) == 1L)
+  if (is.character(libs)) {
+    if (!file_test("-d", libs)) {
+      stop("Argument 'libs' specifies a non-existing directory: ", sQuote(libs))
+    }
+    libs <- normalizePath(libs, mustWork = TRUE)
+  }
+    
   bin <- get_rwasm_rscript(must_work = FALSE)
   if (!file_test("-x", bin)) bin <- install_rwasm_rscript()
 
@@ -34,8 +45,14 @@ rwasm_rscript <- function(file = NULL, code = NULL) {
     on.exit(file.remove(file))
     writeLines(code, con = file)
   }
-  
-  out <- system2(bin, args = c(file), stdout = TRUE, stderr = TRUE)
+
+  args <- c(file)
+  if (is.character(libs)) {
+    args <- c(args, sprintf("--r-libs=%s", shQuote(libs)))
+  }
+  args <- c(args, "--debug")
+
+  out <- system2(bin, args = args, stdout = TRUE, stderr = TRUE)
   out <- paste(out, collapse = "\n")
   status <- attr(out, "status")
   if (!is.null(status)) {
