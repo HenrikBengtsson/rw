@@ -11,11 +11,16 @@ install_webr <- function(path = node_path()) {
 #' Get the webR version
 #'
 #' @return
-#' `webr_version()` returns a [base::numeric_version] object.
+#' `webr_version()` returns the webR version.
+#'
+#' @details
+#' `r_version()` takes 2-3 seconds the first time it is called. This
+#' is because it queries `getRversion()` in webR.
 #'
 #' @examplesIf interactive()
 #' webr_version()
 #' r_version()
+#' r_version("x.y")
 #'
 #' @export
 webr_version <- local({
@@ -33,18 +38,28 @@ webr_version <- local({
 
 #' Get the R version that webR provides
 #'
+#' @param format (optional; character string) If `"x.y"`, then the
+#' 'x.y' component of the R version 'x.y.z' is returned.
+#'
 #' @return
-#' `r_version()` returns a [base::R_system_version] object.
+#' `r_version()` returns the version of R that webR implements.
 #'
 #' @rdname webr_version
 #' @export
 r_version <- local({
   version <- NULL
-  function() {
+  function(format = NULL) {
     if (is.null(version)) {
       esm_code <- 'import { WebR } from "webr"; const webr = new WebR(); await webr.init(); await webr.evalR("cat(as.character(getRversion()))"); process.exit(0);'
       out <- node(args = c("--input-type=module", "-e", shQuote(esm_code)))
       version <<- R_system_version(out)
+    }
+
+    if (!is.null(format)) {
+      if (format == "x.y") {
+        version <- paste(unlist(version)[1:2], collapse = ".")
+        version <- package_version(version)
+      }
     }
     version
   }
