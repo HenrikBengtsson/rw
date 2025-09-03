@@ -1,4 +1,43 @@
 #' @importFrom utils file_test
+find_node <- local({
+  bin <- NULL
+  function() {
+    if (!is.null(bin)) return(bin)
+    
+    file <- Sys.getenv("NODE", NA_character_)
+    if (is.na(file)) {
+      file <- Sys.which("node")
+      if (!nzchar(file)) file <- NA_character_
+    }
+    if (is.na(file)) {
+      stop("Failed to locate 'node' executable")
+    }
+    if (!file_test("-f", file)) {
+      stop("No such 'node' executable: ", sQuote(file))
+    }
+    if (!file_test("-x", file)) {
+      stop("'node' file is not an executable: ", sQuote(file))
+    }
+    bin <<- file
+    bin
+  }
+})
+
+
+node <- function(...) {
+  args <- c(...)
+  bin <- find_node()
+  out <- system2(bin, args = args, stdout = TRUE, stderr = TRUE)
+  status <- attr(out, "status")
+  if (!is.null(status)) {
+    msg <- sprintf("'node %s' failed with exit code %d. The capture output was:\n%s\n", paste(args, collapse = " "), status, paste(out, collapse = "\n"))
+    stop(msg)
+  }
+  out
+}
+
+
+#' @importFrom utils file_test
 find_npm <- local({
   bin <- NULL
   function() {
