@@ -2,26 +2,27 @@
 % Please edit documentation in R/rwasm.R
 \name{webr_version}
 \alias{webr_version}
-\alias{r_version}
+\alias{r_info}
 \title{Get the webR version}
 \usage{
 webr_version()
 
-r_version(format = NULL)
+r_info(template = NULL)
 }
 \arguments{
-\item{format}{(optional; character string) If \code{"x.y"}, then the
-'x.y' component of the R version 'x.y.z' is returned.}
+\item{template}{(optional; character string) A template with conversion
+specifiers as described in \link[base:libPaths]{base::R_LIBS_USER} that are expanded.}
 }
 \value{
 \code{webr_version()} returns the webR version.
 
-\code{r_version()} returns the version of R that webR implements.
+\code{r_version()} returns \code{R.version()} in webR and \code{r_version(template)}
+returns a character string based on the format in webR.
 }
 \description{
 Get the webR version
 
-Get the R version that webR provides
+Get R version information on the R instance that webR provides
 }
 \details{
 \code{r_version()} takes 2-3 seconds the first time it is called. This
@@ -29,8 +30,11 @@ is because it queries \code{getRversion()} in webR.
 }
 \examples{
 \dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
-webr_version()
 r_version()
 r_version("x.y")
+\dontshow{\}) # examplesIf}
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+r_info()
+r_info("~/R/\%p-library/\%v")
 \dontshow{\}) # examplesIf}
 }
