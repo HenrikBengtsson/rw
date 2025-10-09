@@ -65,3 +65,6 @@ EXAMPLES:
   export RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5
   rw --expr='webr::install("curl")'
 ```
+
+
+[webR]: https://github.com/r-wasm/webr/
