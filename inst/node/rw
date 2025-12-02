@@ -286,10 +286,14 @@ for (const arg of args) {
     }
 }
 
-// Main R script?
+// Show help by default
 if (r_exprs.length == 0 && r_script == null) {
-    error("Neither R expression nor R script was specified");
-} else if (r_exprs.length > 0 && r_script !== null) {
+    show_help();
+    process.exit(0);
+}
+
+// Main R script?
+if (r_exprs.length > 0 && r_script !== null) {
     error("R script must not be specified when an R expression is specified");
 } else if (r_script !== null) {
     r_exprs = read_code(r_script, "main", debug);
