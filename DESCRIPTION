@@ -1,5 +1,5 @@
-Package: rwasm.extras
-Version: 0.0.0-9000
+Package: rw
+Version: 0.0.0-9001
 Imports:
   tools,
   utils
@@ -12,5 +12,5 @@ SystemRequirements: node (>= 17.0.0)
 License: GPL (>= 3)
 Language: en-US
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Roxygen: list(markdown = TRUE)
