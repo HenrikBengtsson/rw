@@ -29,12 +29,13 @@ Get R version information on the R instance that webR provides
 is because it queries \code{getRversion()} in webR.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 r_version()
 r_version("x.y")
 \dontshow{\}) # examplesIf}
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 r_info()
 r_info("~/R/\%p-library/\%v")
 \dontshow{\}) # examplesIf}
 }
+\keyword{internal}

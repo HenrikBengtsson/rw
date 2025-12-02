@@ -25,6 +25,22 @@ base_pkgs <- local({
 #'
 #' @param pkgs (character vector) Names of packages to install.
 #'
+#' @return
+#' A named logical vector, where the names correspond to packages installed
+#' and the values whether they installed successfully.
+#'
+#' @examplesIf interactive()
+#' # Install the 'future' package
+#' install_packages("future")
+#' 
+#' # List all installed packages
+#' code <- c(
+#'   'db <- installed.packages()',
+#'   'cat(sort(paste(rownames(db), db[, "Version"])), sep = "\n")'
+#' )
+#' out <- rwasm_rscript(code = code)
+#' writeLines(out)
+#'
 #' @importFrom utils available.packages installed.packages file_test download.file untar
 #' @importFrom tools package_dependencies
 #' @export
@@ -82,3 +98,21 @@ install_packages <- function(pkgs, lib = r_libs_user(), repos = rwasm_repos(), c
 }
 
 
+#' Manage the R package library for webR
+#'
+#' @param path (character string) The path to the R package library
+#' on the host file system to be mounted as the R user package library
+#' in webR. Conversion specifiers as described in [base::R_LIBS_USER]
+#' are automatically expanded per `R.version` in webR.
+#'
+#' @return
+#' `r_libs_user()` returns the package library path for webR in
+#' `~/R/%p-library/%v`, where `%p` is the R platform and `%v` is the
+#' R 'x.y' version R  in webR, e.g.
+#' `~/R/wasm32-unknown-emscripten-library/4.5`.
+#' 
+#' @export
+r_libs_user <- function(path = "~/R/%p-library/%v") {
+  if (grepl("%.", path)) path <- r_info(path)
+  path
+}

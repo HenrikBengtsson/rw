@@ -24,8 +24,8 @@ find_node <- local({
 })
 
 
-node <- function(...) {
-  args <- c(...)
+node <- function(..., args = NULL) {
+  args <- c(..., args)
   bin <- find_node()
   out <- system2(bin, args = args, stdout = TRUE, stderr = TRUE)
   status <- attr(out, "status")
@@ -81,20 +81,4 @@ node_path <- function() {
   path <- tools::R_user_dir(.packageName, "data")
   if (!file_test("-d", path)) dir.create(path, recursive = TRUE)
   path
-}
-
-
-#' @importFrom utils file_test
-install_node_package <- function(path = node_path()) {
-  file <- "package.json"
-  pathname <- file.path(path, file)
-  if (!file_test("-f", pathname)) {
-    src <- system.file(package = .packageName, "node", file, mustWork = TRUE)
-    file.copy(src, pathname)
-    if (!file_test("-f", pathname)) {
-      stop(sprintf("Failed to install %s", sQuote(pathname)))
-    }
-  }
-  
-  pathname
 }
