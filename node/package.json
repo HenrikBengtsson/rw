@@ -1,6 +1,6 @@
 {
     "name": "@henrikbengtsson/rw",
-    "version": "0.0.1",
+    "version": "0.0.3",
     "description": "Run Rscript within WebAssembly (WASM) via node.js",
     "main": "index.mjs",
     "bin": {
@@ -8,6 +8,7 @@
     },
     "type": "module",
     "dependencies": {
+        "@types/ws": "^8.18.1",
         "webr": "^0.5.7"
     },
     "author": "Henrik Bengtsson",
