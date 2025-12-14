@@ -31,12 +31,14 @@ RWASM OPTIONS:
                                 (default: '$RW_R_LIBS_USER')
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
-  --prologue=<R script>         R script evaluated before main R script
-  --epilogue=<R script>         R script evaluated after main R script
+  --prologue=<R script>         R script evaluated before main R code
+  --prologue-expr=<R code>      R code evaluated before main R code
+  --epilogue=<R script>         R script evaluated after main R code
+  --epilogue-expr=<R code>      R code evaluated after main R code
   --shared=<host-dir>           Bind host directory available to prologue and
                                 epilogue scripts at '/host/shared', but not
                                 the main script (default: '$RW_SHARED')
-  --expr=<R code>               R code to evaluate (multiple okay).
+  --expr=<R code>               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
 
 EXAMPLES:
@@ -51,10 +53,16 @@ EXAMPLES:
   rw --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 main.R
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw main.R
 
-  ## An R session with data loaded by the prologue script
+  ## An R session with data loaded from host by prologue code and
+  ## with results saved by the epilogue code, without giving the main
+  ## R code acccess to the host file system
   export RW_SHARED=shared
-  Rscript -e "saveRDS(list(a=1, b=2), file = file.path(Sys.getenv('RW_SHARED'), '/in.rds'))"
-  rw --prologue=prologue.R main.R
+  mkdir -p "${RW_SHARED}"
+  Rscript -e "saveRDS(list(a=1, b=2), file.path(Sys.getenv('RW_SHARED'), '/in.rds'))"
+  rw \
+    --prologue-expr="data_in <- readRDS('/host/shared/in.rds')" \
+    --epilogue-expr="saveRDS(data_out, '/host/shared/out.rds')" \
+    --expr="data_out <- lapply(data_in, sqrt)"
 
   ## Install a package (non-persistent)
   rw --expr='webr::install("curl")'
@@ -223,11 +231,13 @@ let debug = false;
 let r_libs_host = null;
 let r_binds = [];
 let r_shared_host = null;
-let r_prologue = null;
+let r_prologue_script = null;
+let r_epilogue_script = null;
 let r_script = null;
-let r_epilogue = null;
-let r_args = [];
+let r_prologue_exprs = [];
+let r_epilogue_exprs = [];
 let r_exprs = [];
+let r_args = [];
 let webr_args = [];
 
 let value = null;
@@ -256,6 +266,14 @@ for (const arg of args) {
         value = arg.slice(prefix.length);
         if (debug) console.log(`expr=${value}`)
         r_exprs.push(value);
+    } else if (arg.startsWith((prefix = "--prologue-expr="))) {
+        value = arg.slice(prefix.length);
+        if (debug) console.log(`prologue_expr=${value}`)
+        r_prologue_exprs.push(value);
+    } else if (arg.startsWith((prefix = "--epilogue-expr="))) {
+        value = arg.slice(prefix.length);
+        if (debug) console.log(`epilogue_expr=${value}`)
+        r_epilogue_exprs.push(value);
     } else if (arg.startsWith((prefix = "--r-libs="))) {
         value = arg.slice(prefix.length);
         r_libs_host = normalize_path(value, "host directory");
@@ -272,12 +290,12 @@ for (const arg of args) {
         if (debug) console.log(`r_shared_host=${r_shared_host}`)
     } else if (arg.startsWith((prefix = "--prologue="))) {
         value = arg.slice(prefix.length);
-        r_prologue = normalize_path(value, "host file");
-        if (debug) console.log(`r_prologue=${r_prologue}`)
+        r_prologue_script = normalize_path(value, "host file");
+        if (debug) console.log(`r_prologue_script=${r_prologue_script}`)
     } else if (arg.startsWith((prefix = "--epilogue="))) {
         value = arg.slice(prefix.length);
-        r_epilogue = normalize_path(value, "host file");
-        if (debug) console.log(`r_epilogue=${r_epilogue}`)
+        r_epilogue_script = normalize_path(value, "host file");
+        if (debug) console.log(`r_epilogue_script=${r_epilogue_script}`)
     } else {
         if (r_exprs.length == 0 && r_script == null) {
             r_script = normalize_path(arg, "host file");
@@ -297,9 +315,23 @@ if (r_exprs.length == 0 && r_script == null) {
 
 // Main R script?
 if (r_exprs.length > 0 && r_script !== null) {
-    error("R script must not be specified when an R expression is specified");
+    error("R script must not be specified when  R expressions are specified");
 } else if (r_script !== null) {
     r_exprs = read_code(r_script, "main", debug);
+}
+
+// Prologue R script?
+if (r_prologue_exprs.length > 0 && r_prologue_script !== null) {
+    error("R prologue script must not be specified when R prologue expressions are specified");
+} else if (r_prologue_script !== null) {
+    r_prologue_exprs = read_code(r_prologue_script, "prologue", debug);
+}
+
+// Epilogue R script?
+if (r_epilogue_exprs.length > 0 && r_epilogue_script !== null) {
+    error("R epilogue script must not be specified when R epilogue expressions are specified");
+} else if (r_epilogue_script !== null) {
+    r_epilogue_exprs = read_code(r_epilogue_script, "epilogue", debug);
 }
 
 
@@ -338,12 +370,9 @@ if (r_binds !== null) {
 }
 
 
-// Prologue R script?
-let code = []
-if (r_prologue !== null) {
-    if (debug) console.log("Sourcing prologue R script ...")
-    
-    code = read_code(r_prologue, "prologue", debug);
+// Prologue R code?
+if (r_prologue_exprs.length > 0) {
+    if (debug) console.log("Evaluating prologue R code ...")
     
     // Bind R user library to the R library path on host?
     const r_shared_webr = "/host/shared"
@@ -351,41 +380,39 @@ if (r_prologue !== null) {
         await webr_mount(r_shared_host, r_shared_webr, debug);
     }
 
-    await webr_eval_code(code, debug);
+    await webr_eval_code(r_prologue_exprs, debug);
 
     if (r_shared_host !== null) {
         await webr_unmount(r_shared_webr, debug);
     }
 
-    if (debug) console.log("Sourcing prologue R script ... done")
+    if (debug) console.log("Evaluating prologue R code ... done")
 }
 
 
-// Main R script
+// Main R code
 if (debug) console.log("Evaluate main R code ...")
 await webr_eval_code(r_exprs, debug);
 if (debug) console.log("Evaluate main R code ... done")
 
 
-// Eiplogue R script?
-if (r_epilogue !== null) {
-    if (debug) console.log("Sourcing epilogue R script ...")
+// Epilogue R code?
+if (r_epilogue_exprs.length > 0) {
+    if (debug) console.log("Evaluating epilogue R code ...")
     
-    code = read_code(r_epilogue, "epilogue", debug);
-
     // Bind R user library to the R library path on host?
     const r_shared_webr = "/host/shared"
     if (r_shared_host !== null) {
         await webr_mount(r_shared_host, r_shared_webr, debug);
     }
 
-    await webr_eval_code(code, debug);
+    await webr_eval_code(r_epilogue_exprs, debug);
 
     if (r_shared_host !== null) {
-//        await webr_unmount(r_shared_webr, debug);
+        await webr_unmount(r_shared_webr, debug);
     }
-    
-    if (debug) console.log("Sourcing epilogue R script ... done")
+
+    if (debug) console.log("Evaluating epilogue R code ... done")
 }
 
 
