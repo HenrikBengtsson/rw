@@ -16,7 +16,7 @@ function show_help() {
     console.log(`
 USAGE:
 
-  rw [rwasm options] script [args]
+  rw [rwasm options] <script.R> [args]
   
 RWASM OPTIONS:
 
@@ -31,11 +31,13 @@ RWASM OPTIONS:
                                 (default: '$RW_R_LIBS_USER')
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
-  --prologue=<R script>         Script evaluated before main R script
-  --epilogue=<R script>         Script evaluated after main R script
+  --prologue=<R script>         R script evaluated before main R script
+  --epilogue=<R script>         R script evaluated after main R script
   --shared=<host-dir>           Bind host directory available to prologue and
                                 epilogue scripts at '/host/shared', but not
                                 the main script (default: '$RW_SHARED')
+  --expr=<R code>               R code to evaluate (multiple okay).
+                                Alternative to specifying 'script.R'
 
 EXAMPLES:
 
