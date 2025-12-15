@@ -1,0 +1,20 @@
+SHELL:=/bin/bash
+
+all: install README.md
+
+.PHONY: help
+
+install:
+	npm install .
+
+## Regenerate README.md
+README.md: README.md.tmpl
+	@bfr=$$(cat "$<"); \
+	help=$$(npx rw --help 2> /dev/null || true); \
+	bfr=$$(echo "$${bfr/\{\{ HELP \}\}/$$help}"); \
+	printf "$$bfr" > $@
+	grep -F "Version:" "$@"
+	@echo "README.md"
+
+
+.PHONY: README.md

@@ -8,8 +8,9 @@
     },
     "type": "module",
     "dependencies": {
-        "ws": "^8.18.3",
-        "webr": "^0.5.7"
+        "@henrikbengtsson/rw": "^0.0.4",
+        "webr": "^0.5.7",
+        "ws": "^8.18.3"
     },
     "author": "Henrik Bengtsson",
     "license": "MIT"

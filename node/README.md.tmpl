@@ -1,0 +1,34 @@
+# rw: CLI for webR with Sandboxing Features
+
+## TL;DR
+
+The `rw` tools is an Rscript-like command-line-interface (CLI) tool
+for running R code in a sandboxed WebAssembly environment via Node.js
+and **[webR]**, e.g.
+
+```sh
+$ rw --r-libs=~/R/webR --prologue=trusted.R untrusted.R
+```
+
+This can be useful when we need to evaluate arbitrary, untrusted R
+code in a secure manner isolated from the host system. It is also
+useful for making sure R code and R packages work in **webR** without
+having to go the extra mile to upload packages online and then testing
+it in the web browser at <https://webr.sh/>.
+
+
+## Installation
+
+```sh
+npm install -g @henrikbengtsson/rw
+```
+
+## Command-line Interface
+
+```sh
+$ rw --help
+{{ HELP }}
+```
+
+
+[webR]: https://github.com/r-wasm/webr/

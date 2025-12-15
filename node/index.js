@@ -11,14 +11,18 @@ const __dirname = path.dirname(__filename);
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const version = packageJson.version;
+const author = packageJson.author;
+const license = packageJson.license;
 
 function show_help() {
     console.log(`
-USAGE:
+rw: CLI for webR with Sandboxing Features
+
+Usage:
 
   rw [rwasm options] <script.R> [args]
   
-RWASM OPTIONS:
+RWasm options:
 
   --help                        Show this help
   --version                     Show version
@@ -31,17 +35,17 @@ RWASM OPTIONS:
                                 (default: '$RW_R_LIBS_USER')
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
-  --prologue=<R script>         R script evaluated before main R code
-  --prologue-expr=<R code>      R code evaluated before main R code
-  --epilogue=<R script>         R script evaluated after main R code
-  --epilogue-expr=<R code>      R code evaluated after main R code
   --shared=<host-dir>           Bind host directory available to prologue and
-                                epilogue scripts at '/host/shared', but not
-                                the main script (default: '$RW_SHARED')
+                                epilogue code at '/host/shared', but not
+                                the main code (default: '$RW_SHARED')
+  --prologue=<R script>         R script evaluated before main R code
+  --epilogue=<R script>         R script evaluated after main R code
+  --prologue-expr=<R code>      R code evaluated before main R code
+  --epilogue-expr=<R code>      R code evaluated after main R code
   --expr=<R code>               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
 
-EXAMPLES:
+Examples:
 
   rw --expr='sum(1:100)'
 
@@ -57,11 +61,11 @@ EXAMPLES:
   ## with results saved by the epilogue code, without giving the main
   ## R code acccess to the host file system
   export RW_SHARED=shared
-  mkdir -p "${RW_SHARED}"
+  mkdir -p "\${RW_SHARED}"
   Rscript -e "saveRDS(list(a=1, b=2), file.path(Sys.getenv('RW_SHARED'), '/in.rds'))"
-  rw \
-    --prologue-expr="data_in <- readRDS('/host/shared/in.rds')" \
-    --epilogue-expr="saveRDS(data_out, '/host/shared/out.rds')" \
+  rw \\
+    --prologue-expr="data_in <- readRDS('/host/shared/in.rds')" \\
+    --epilogue-expr="saveRDS(data_out, '/host/shared/out.rds')" \\
     --expr="data_out <- lapply(data_in, sqrt)"
 
   ## Install a package (non-persistent)
@@ -72,6 +76,10 @@ EXAMPLES:
 
   ## Force re-install of a package (persistently on host)
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='pkgs <- "curl"; utils::remove.packages(pkgs, lib = .libPaths()); webr::install(pkgs, mount = FALSE)'
+
+Version: ${version}
+License: ${license}
+Author: ${author}
 `);
 }    
 
