@@ -90,7 +90,7 @@ Examples:
 
 Version: 0.0.7
 License: MIT
-Author: Henrik Bengtsson
+Author: [object Object]
 ```
 
 

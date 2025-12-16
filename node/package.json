@@ -1,17 +1,35 @@
 {
     "name": "@henrikbengtsson/rw",
+    
     "version": "0.0.7",
+    
     "description": "Run Rscript within WebAssembly (WASM) via node.js",
+    
     "main": "index.mjs",
+    
     "bin": {
         "rw": "index.js"
     },
+    
     "type": "module",
+    
     "dependencies": {
         "@henrikbengtsson/rw": "^0.0.4",
         "webr": "^0.5.7",
         "ws": "^8.18.3"
     },
-    "author": "Henrik Bengtsson",
+
+    "homepage": {
+        "url": "https://github.com/HenrikBengtsson/rw"
+    },
+    
+    "bugs": {
+        "url": "https://github.com/HenrikBengtsson/rw/issues"
+    },
+    
+    "author": {
+        "name": "Henrik Bengtsson"
+    },
+    
     "license": "MIT"
 }
