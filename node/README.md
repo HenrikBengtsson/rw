@@ -91,7 +91,7 @@ Examples:
   ## Force re-install of a package (persistently on host)
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='pkgs <- "curl"; utils::remove.packages(pkgs, lib = .libPaths()); install.packages(pkgs)'
 
-Version: 0.0.6
+Version: 0.0.7
 License: MIT
 Author: Henrik Bengtsson
 ```

@@ -254,11 +254,6 @@ let r_shims = [];
 let value = null;
 let prefix = null;
 
-value = process.env.RW_SHIMS || "install.packages";
-if (value.length > 0) {
-    r_shims = value.split(",");
-}  
-
 for (const arg of args) {
     if (arg == "--help") {
         show_help();
@@ -391,25 +386,133 @@ if (r_binds !== null) {
 }
 
 
-// Shim
+// Use default shims?
+if (r_shims.length == 0) {
+    if (debug) console.log("Using default R shims ...")
+    const value = process.env.RW_SHIMS
+    if (value) {
+        if (debug) console.log("RW_SHIMS: '" + value + "'")
+        r_shims = value.split(",");
+        r_shims = r_shims.filter(str => str !== "")
+    } else {
+        r_shims = [ "install.packages" ]
+    }
+} else {
+    r_shims = r_shims.filter(str => str !== "")
+}
+
+// Shims?
 if (r_shims.length > 0) {
-    if (debug) console.log("Install R shims ...")
-    const code = [];
+    if (debug) console.log("Install R shims: ", r_shims)
+
+    const code = []
     for (const shim of r_shims) {
         if (shim == "install.packages") {
-            code.push(`attach(list(install.packages = function(..., mount = FALSE) webr::install(..., mount = mount)), name = "rw_shims", warn.conflicts = FALSE)`);
+            code.push(`
+attach(list(install.packages = local({
+  install <- function(
+    packages,
+    repos = NULL,
+    info = NULL,
+    lib = NULL,
+    quiet = FALSE,
+    mount = TRUE,
+    skip = TRUE
+  ) {
+    if (is.null(lib)) {
+      lib <- .libPaths()[[1]]
+    }
+    if (is.null(repos)) {
+      repos <- getOption("webr_pkg_repos")
+    }
+  
+    ver <- as.character(getRversion())
+    ver <- gsub("\\\\.[^.]+\$", "", ver)
+  
+    repos <- gsub("/\$", "", repos)
+    contrib <- sprintf("%s/bin/emscripten/contrib/%s", repos, ver)
+  
+    if (is.null(info)) {
+      info <- utils::available.packages(contriburl = contrib)
+    }
+  
+    # Avoid 'recursive' here so that deps of broken packages are not downloaded
+    deps <- unlist(
+      tools::package_dependencies(packages, info, c("Depends", "Imports")),
+      use.names = FALSE
+    )
+    deps <- unique(deps)
+  
+    # Search for existing packages in '.libPaths()' and the 'lib' argument
+    lib_loc <- c(lib, .libPaths())
+  
+    for (dep in deps) {
+      if (length(find.package(dep, lib.loc = lib_loc, quiet = TRUE))) {
+        next
+      }
+      install(dep, repos, info, lib, quiet, mount)
+    }
+
+    for (pkg in packages) {
+      if (skip && length(find.package(pkg, lib.loc = lib_loc, quiet = TRUE))) {
+        next
+      }
+  
+      if (!pkg %in% rownames(info)) {
+        warning(paste("Requested package", pkg, "not found in webR binary repo."))
+        next
+      }
+  
+      repo <- info[pkg, "Repository"]
+      repo <- sub("file:", "", repo, fixed = TRUE)
+  
+      pkg_ver <- info[pkg, "Version"]
+      if (!quiet) message(paste("Downloading webR package:", pkg))
+  
+      if (mount) {
+        # Try mounting '.tgz' as v2.0 VFS image, fallback to extracting the .tgz
+        tryCatch(
+          {
+            webr:::install_vfs_image(repo, lib, pkg, pkg_ver)
+            next
+          },
+          error = function(cnd) {
+            warning(paste(
+              cnd\$message,
+              "Falling back to traditional '.tgz' extraction."
+            ))
+          }
+        )
+      }
+  
+      webr:::install_tgz(repo, lib, pkg, pkg_ver)
+    }
+    invisible(NULL)
+  }
+
+  function(..., mount = FALSE, skip = FALSE) {
+    install(..., mount = mount, skip = skip)
+  }
+})), name = "rw_shims", warn.conflicts = FALSE)
+`);
+        } else if (shim == "webr::install") {
+            code.push(`
+attach(list(install.packages = function(..., mount = FALSE) {
+    webr::install(..., mount = mount)
+}), name = "rw_shims", warn.conflicts = FALSE)
+`);
         } else {
             console.error("ERROR: Unkown shim: '" + shim + "'");
             process.exit(1);
         }
     }
-    if (debug) {
-        console.log(`Shim code: [n=${code.length}]`)
-        for (const code0 of code) {
-            console.log(`${code0}`)
+    if (code.length > 0) {
+        if (debug) {
+            console.log(`Shim code: [n=${code.length}]`)
+            for (const code0 of code) console.log(`${code0}`)
         }
+        await webR.evalRVoid(code);
     }
-    await webR.evalRVoid(code);
 }
 
 
