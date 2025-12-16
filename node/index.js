@@ -35,6 +35,8 @@ RWasm options:
                                 (default: '$RW_R_LIBS_USER')
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
+  --shims=<shims>               Comma-separated set of shims
+                                (default: '$RW_SHIMS'; 'install.packages')
   --shared=<host-dir>           Bind host directory available to prologue and
                                 epilogue code at '/host/shared', but not
                                 the main code (default: '$RW_SHARED')
@@ -69,13 +71,13 @@ Examples:
     --expr="data_out <- lapply(data_in, sqrt)"
 
   ## Install a package (non-persistent)
-  rw --expr='webr::install("curl")'
+  rw --expr='install.packages("curl")'
 
   ## Install a package, if not already installed (persistently on host)
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='webr::install("curl")'
+  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='install.packages("curl")'
 
   ## Force re-install of a package (persistently on host)
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='pkgs <- "curl"; utils::remove.packages(pkgs, lib = .libPaths()); webr::install(pkgs, mount = FALSE)'
+  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='pkgs <- "curl"; utils::remove.packages(pkgs, lib = .libPaths()); install.packages(pkgs)'
 
 Version: ${version}
 License: ${license}
@@ -247,9 +249,16 @@ let r_epilogue_exprs = [];
 let r_exprs = [];
 let r_args = [];
 let webr_args = [];
+let r_shims = [];
 
 let value = null;
 let prefix = null;
+
+value = process.env.RW_SHIMS || "install.packages";
+if (value.length > 0) {
+    r_shims = value.split(",");
+}  
+
 for (const arg of args) {
     if (arg == "--help") {
         show_help();
@@ -274,6 +283,10 @@ for (const arg of args) {
         value = arg.slice(prefix.length);
         if (debug) console.log(`expr=${value}`)
         r_exprs.push(value);
+    } else if (arg.startsWith((prefix = "--shims="))) {
+        value = arg.slice(prefix.length);
+        value = value.split(",");
+        r_shims.push(...value);
     } else if (arg.startsWith((prefix = "--prologue-expr="))) {
         value = arg.slice(prefix.length);
         if (debug) console.log(`prologue_expr=${value}`)
@@ -375,6 +388,28 @@ if (r_binds !== null) {
         if (parts.length == 1) parts.push(src);
         await webr_mount(parts[0], parts[1], debug);
     }
+}
+
+
+// Shim
+if (r_shims.length > 0) {
+    if (debug) console.log("Install R shims ...")
+    const code = [];
+    for (const shim of r_shims) {
+        if (shim == "install.packages") {
+            code.push(`attach(list(install.packages = function(..., mount = FALSE) webr::install(..., mount = mount)), name = "rw_shims", warn.conflicts = FALSE)`);
+        } else {
+            console.error("ERROR: Unkown shim: '" + shim + "'");
+            process.exit(1);
+        }
+    }
+    if (debug) {
+        console.log(`Shim code: [n=${code.length}]`)
+        for (const code0 of code) {
+            console.log(`${code0}`)
+        }
+    }
+    await webR.evalRVoid(code);
 }
 
 

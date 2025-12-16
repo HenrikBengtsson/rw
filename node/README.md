@@ -47,6 +47,8 @@ RWasm options:
                                 (default: '$RW_R_LIBS_USER')
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
+  --shims=<shims>               Comma-separated set of shims
+                                (default: '$RW_SHIMS'; 'install.packages')
   --shared=<host-dir>           Bind host directory available to prologue and
                                 epilogue code at '/host/shared', but not
                                 the main code (default: '$RW_SHARED')
@@ -81,15 +83,15 @@ Examples:
     --expr="data_out <- lapply(data_in, sqrt)"
 
   ## Install a package (non-persistent)
-  rw --expr='webr::install("curl")'
+  rw --expr='install.packages("curl")'
 
   ## Install a package, if not already installed (persistently on host)
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='webr::install("curl")'
+  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='install.packages("curl")'
 
   ## Force re-install of a package (persistently on host)
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='pkgs <- "curl"; utils::remove.packages(pkgs, lib = .libPaths()); webr::install(pkgs, mount = FALSE)'
+  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='pkgs <- "curl"; utils::remove.packages(pkgs, lib = .libPaths()); install.packages(pkgs)'
 
-Version: 0.0.5
+Version: 0.0.6
 License: MIT
 Author: Henrik Bengtsson
 ```

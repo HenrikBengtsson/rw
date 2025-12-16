@@ -6,6 +6,7 @@ all: install README.md
 
 install:
 	npm install .
+	npm install -g .
 
 ## Regenerate README.md
 README.md: README.md.tmpl
