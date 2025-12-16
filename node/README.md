@@ -88,9 +88,9 @@ Examples:
   ## Install a package (persistently on host)
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='install.packages("curl")'
 
-Version: 0.0.7
+Version: 0.0.8
 License: MIT
-Author: [object Object]
+Author: Henrik Bengtsson
 ```
 
 
