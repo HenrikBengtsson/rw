@@ -61,32 +61,35 @@ RWasm options:
 
 Examples:
 
-  rw --expr='sum(1:100)'
+  rw --expr="sum(1:100)"
 
   rw main.R
 
-  rw --expr='cat(Sys.getenv("R_LIBS_USER"))'
+  rw --expr="cat(Sys.getenv('R_LIBS_USER'))"
 
   ## An R session with the R user library on host
   rw --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 main.R
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw main.R
 
-  ## An R session with data loaded from host by prologue code and
-  ## with results saved by the epilogue code, without giving the main
-  ## R code acccess to the host file system
-  export RW_SHARED=shared
-  mkdir -p "${RW_SHARED}"
-  Rscript -e "saveRDS(list(a=1, b=2), file.path(Sys.getenv('RW_SHARED'), '/in.rds'))"
+  ## Install a package (non-persistent)
+  rw --expr="install.packages('praise')" --expr="message(praise::praise())"
+
+  ## Install a package (persistently on host)
+  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr="install.packages('praise')"
+  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr="message(praise::praise())"
+
+
+  ## Evaluate parts of the R code that is untrusted in R WASM, where
+  ## data is passed in and out via a shared folder that trusted prologue
+  ## and epilogue code has access to
+  mkdir shared
+  Rscript -e "saveRDS(list(a=1, b=2), 'shared/in.rds')"
   rw \
+    --shared=shared \
     --prologue-expr="data_in <- readRDS('/host/shared/in.rds')" \
     --epilogue-expr="saveRDS(data_out, '/host/shared/out.rds')" \
     --expr="data_out <- lapply(data_in, sqrt)"
-
-  ## Install a package (non-persistent)
-  rw --expr='install.packages("curl")'
-
-  ## Install a package (persistently on host)
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='install.packages("curl")'
+  Rscript -e "data_out <- readRDS('shared/out.rds')" -e "utils::str(data_out)"
 
 Version: 0.0.8
 License: MIT
