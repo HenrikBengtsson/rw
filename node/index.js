@@ -73,11 +73,8 @@ Examples:
   ## Install a package (non-persistent)
   rw --expr='install.packages("curl")'
 
-  ## Install a package, if not already installed (persistently on host)
+  ## Install a package (persistently on host)
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='install.packages("curl")'
-
-  ## Force re-install of a package (persistently on host)
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr='pkgs <- "curl"; utils::remove.packages(pkgs, lib = .libPaths()); install.packages(pkgs)'
 
 Version: ${version}
 License: ${license}
