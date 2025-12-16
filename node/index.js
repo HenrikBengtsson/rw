@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const version = packageJson.version;
-const author = packageJson.author;
+const author = packageJson.author.name;
 const license = packageJson.license;
 
 function show_help() {
