@@ -9,7 +9,7 @@ install:
 	npm install -g .
 
 ## Regenerate README.md
-README.md: README.md.tmpl
+README.md: _README.md.tmpl
 	@bfr=$$(cat "$<"); \
 	help=$$(npx rw --help 2> /dev/null || true); \
 	bfr=$$(echo "$${bfr/\{\{ HELP \}\}/$$help}"); \

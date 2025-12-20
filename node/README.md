@@ -91,7 +91,7 @@ Examples:
     --expr="data_out <- lapply(data_in, sqrt)"
   Rscript -e "data_out <- readRDS('shared/out.rds')" -e "utils::str(data_out)"
 
-Version: 0.0.8
+Version: 0.0.9
 License: MIT
 Author: Henrik Bengtsson
 ```
