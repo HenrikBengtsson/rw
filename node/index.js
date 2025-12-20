@@ -211,15 +211,20 @@ function read_code(file, type = "main", debug = false) {
 async function webr_eval_code(code, debug = false) {
     let shelter = await new webR.Shelter()
     
-    let result = await shelter.captureR(code, {
+    let response = await shelter.captureR(code, {
         withAutoprint: true,
         captureStreams: true,
-        captureConditions: false
+        captureConditions: false,
+        withHandlers: true
     })
     
-    if (debug) console.log(result);
+    if (debug) {
+	console.log("Response:");
+	console.log(response);
+	console.log(response.result);
+    }
     
-    for (const { type, data } of result.output) {
+    for (const { type, data } of response.output) {
         if (type === "stdout") {
             console.log(data);
         } else if (type === "stderr") {
@@ -229,7 +234,7 @@ async function webr_eval_code(code, debug = false) {
     
     shelter.purge();
     
-    return result;
+    return response;
 }
 
 
