@@ -37,9 +37,9 @@ RWasm options:
                                 (may be specified multiple times)
   --shims=<shims>               Comma-separated set of shims
                                 (default: '$RW_SHIMS'; 'install.packages')
-  --shared=<host-dir>           Bind host directory available to prologue and
-                                epilogue code at '/host/shared', but not
-                                the main code (default: '$RW_SHARED')
+  --stage=<host-dir>            Bind host directory available to prologue and
+                                epilogue code at '/host/stage', but not
+                                the main code (default: '$RW_STAGE')
   --prologue=<R script>         R script evaluated before main R code
   --epilogue=<R script>         R script evaluated after main R code
   --prologue-expr=<R code>      R code evaluated before main R code
@@ -67,17 +67,17 @@ Examples:
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr="message(praise::praise())"
 
 
-  ## Evaluate parts of the R code that is untrusted in R WASM, where
-  ## data is passed in and out via a shared folder that trusted prologue
-  ## and epilogue code has access to
-  mkdir shared
-  Rscript -e "saveRDS(list(a=1, b=2), 'shared/in.rds')"
+  ## Evaluate parts of the R code that is untrusted in R WASM, with
+  ## data passed in and out via a stage folder that trusted prologue
+  ## and epilogue code has access to, but not the main code
+  mkdir stage
+  Rscript -e "saveRDS(list(a=1, b=2), 'stage/in.rds')"
   rw \\
-    --shared=shared \\
-    --prologue-expr="data_in <- readRDS('/host/shared/in.rds')" \\
-    --epilogue-expr="saveRDS(data_out, '/host/shared/out.rds')" \\
+    --stage=stage \\
+    --prologue-expr="data_in <- readRDS('/host/stage/in.rds')" \\
+    --epilogue-expr="saveRDS(data_out, '/host/stage/out.rds')" \\
     --expr="data_out <- lapply(data_in, sqrt)"
-  Rscript -e "data_out <- readRDS('shared/out.rds')" -e "utils::str(data_out)"
+  Rscript -e "data_out <- readRDS('stage/out.rds')" -e "utils::str(data_out)"
 
 Version: ${version}
 License: ${license}
@@ -240,7 +240,7 @@ const args = process.argv.slice(2);
 let debug = false;
 let r_libs_host = null;
 let r_binds = [];
-let r_shared_host = null;
+let r_stage_host = null;
 let r_prologue_script = null;
 let r_epilogue_script = null;
 let r_script = null;
@@ -300,10 +300,10 @@ for (const arg of args) {
         normalize_path(bind.split(":")[0], "host directory");
         r_binds.push(bind);
         if (debug) console.log(`Add bind=${bind}`)
-    } else if (arg.startsWith((prefix = "--shared="))) {
+    } else if (arg.startsWith((prefix = "--stage="))) {
         value = arg.slice(prefix.length);
-        r_shared_host = normalize_path(value, "host directory");
-        if (debug) console.log(`r_shared_host=${r_shared_host}`)
+        r_stage_host = normalize_path(value, "host directory");
+        if (debug) console.log(`r_stage_host=${r_stage_host}`)
     } else if (arg.startsWith((prefix = "--prologue="))) {
         value = arg.slice(prefix.length);
         r_prologue_script = normalize_path(value, "host file");
@@ -356,8 +356,8 @@ if (r_libs_host == null) {
     r_libs_host = process.env.RW_R_LIBS_USER || null;
 }
 
-if (r_shared_host == null) {
-    r_shared_host = process.env.RW_SHARED || null;
+if (r_stage_host == null) {
+    r_stage_host = process.env.RW_STAGE || null;
 }
 
 
@@ -521,15 +521,15 @@ if (r_prologue_exprs.length > 0) {
     if (debug) console.log("Evaluating prologue R code ...")
     
     // Bind R user library to the R library path on host?
-    const r_shared_webr = "/host/shared"
-    if (r_shared_host !== null) {
-        await webr_mount(r_shared_host, r_shared_webr, debug);
+    const r_stage_webr = "/host/stage"
+    if (r_stage_host !== null) {
+        await webr_mount(r_stage_host, r_stage_webr, debug);
     }
 
     await webr_eval_code(r_prologue_exprs, debug);
 
-    if (r_shared_host !== null) {
-        await webr_unmount(r_shared_webr, debug);
+    if (r_stage_host !== null) {
+        await webr_unmount(r_stage_webr, debug);
     }
 
     if (debug) console.log("Evaluating prologue R code ... done")
@@ -547,15 +547,15 @@ if (r_epilogue_exprs.length > 0) {
     if (debug) console.log("Evaluating epilogue R code ...")
     
     // Bind R user library to the R library path on host?
-    const r_shared_webr = "/host/shared"
-    if (r_shared_host !== null) {
-        await webr_mount(r_shared_host, r_shared_webr, debug);
+    const r_stage_webr = "/host/stage"
+    if (r_stage_host !== null) {
+        await webr_mount(r_stage_host, r_stage_webr, debug);
     }
 
     await webr_eval_code(r_epilogue_exprs, debug);
 
-    if (r_shared_host !== null) {
-        await webr_unmount(r_shared_webr, debug);
+    if (r_stage_host !== null) {
+        await webr_unmount(r_stage_webr, debug);
     }
 
     if (debug) console.log("Evaluating epilogue R code ... done")

@@ -49,9 +49,9 @@ RWasm options:
                                 (may be specified multiple times)
   --shims=<shims>               Comma-separated set of shims
                                 (default: '$RW_SHIMS'; 'install.packages')
-  --shared=<host-dir>           Bind host directory available to prologue and
-                                epilogue code at '/host/shared', but not
-                                the main code (default: '$RW_SHARED')
+  --stage=<host-dir>            Bind host directory available to prologue and
+                                epilogue code at '/host/stage', but not
+                                the main code (default: '$RW_STAGE')
   --prologue=<R script>         R script evaluated before main R code
   --epilogue=<R script>         R script evaluated after main R code
   --prologue-expr=<R code>      R code evaluated before main R code
@@ -79,17 +79,17 @@ Examples:
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr="message(praise::praise())"
 
 
-  ## Evaluate parts of the R code that is untrusted in R WASM, where
-  ## data is passed in and out via a shared folder that trusted prologue
-  ## and epilogue code has access to
-  mkdir shared
-  Rscript -e "saveRDS(list(a=1, b=2), 'shared/in.rds')"
+  ## Evaluate parts of the R code that is untrusted in R WASM, with
+  ## data passed in and out via a stage folder that trusted prologue
+  ## and epilogue code has access to, but not the main code
+  mkdir stage
+  Rscript -e "saveRDS(list(a=1, b=2), 'stage/in.rds')"
   rw \
-    --shared=shared \
-    --prologue-expr="data_in <- readRDS('/host/shared/in.rds')" \
-    --epilogue-expr="saveRDS(data_out, '/host/shared/out.rds')" \
+    --stage=stage \
+    --prologue-expr="data_in <- readRDS('/host/stage/in.rds')" \
+    --epilogue-expr="saveRDS(data_out, '/host/stage/out.rds')" \
     --expr="data_out <- lapply(data_in, sqrt)"
-  Rscript -e "data_out <- readRDS('shared/out.rds')" -e "utils::str(data_out)"
+  Rscript -e "data_out <- readRDS('stage/out.rds')" -e "utils::str(data_out)"
 
 Version: 0.0.9
 License: MIT
