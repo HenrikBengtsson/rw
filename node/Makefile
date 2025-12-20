@@ -17,7 +17,7 @@ README.md: _README.md.tmpl
 	grep -F "Version:" "$@"
 	@echo "README.md"
 
-publish: install README.md
-	npm publish
+pack: install README.md
+	npm pack
 
 .PHONY: README.md
