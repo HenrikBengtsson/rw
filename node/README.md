@@ -58,12 +58,15 @@ RWasm options:
   --epilogue-expr=<R code>      R code evaluated after main R code
   --expr=<R code>               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
+  --timeout=<seconds>           Maximum evaluation time in seconds
 
 Examples:
 
   rw --expr="sum(1:100)"
 
   rw main.R
+
+  rw --timeout=3.5 --expr="{ Sys.sleep(5.0); 42 }"
 
   rw --expr="cat(Sys.getenv('R_LIBS_USER'))"
 
@@ -91,7 +94,7 @@ Examples:
     --expr="data_out <- lapply(data_in, sqrt)"
   Rscript -e "data_out <- readRDS('stage/out.rds')" -e "utils::str(data_out)"
 
-Version: 0.0.9
+Version: 0.0.10
 License: MIT
 Author: Henrik Bengtsson
 ```

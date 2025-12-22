@@ -46,12 +46,15 @@ RWasm options:
   --epilogue-expr=<R code>      R code evaluated after main R code
   --expr=<R code>               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
+  --timeout=<seconds>           Maximum evaluation time in seconds
 
 Examples:
 
   rw --expr="sum(1:100)"
 
   rw main.R
+
+  rw --timeout=3.5 --expr="{ Sys.sleep(5.0); 42 }"
 
   rw --expr="cat(Sys.getenv('R_LIBS_USER'))"
 
@@ -208,15 +211,36 @@ function read_code(file, type = "main", debug = false) {
     return code;
 }    
 
-async function webr_eval_code(code, debug = false) {
+async function webr_eval_code(code, timeout = 0, debug = false) {
+    if (debug) {
+        console.log(`webr_eval_code(..., timeout = ${timeout}):`)
+    }
+    
     let shelter = await new webR.Shelter()
     
-    let response = await shelter.captureR(code, {
+    let timeoutPromise = new Promise((resolve, reject) => {
+        if (timeout > 0) {
+            let id = setTimeout(() => {
+                webR.interrupt();
+                reject(new Error(`Evaluation timed out after ${timeout} seconds`));
+            }, 1000 * timeout);
+        }
+    });
+
+    let capturePromise = shelter.captureR(code, {
         withAutoprint: true,
         captureStreams: true,
         captureConditions: false,
         withHandlers: true
-    })
+    });
+
+    let response;
+    try {
+        response = await Promise.race([capturePromise, timeoutPromise]);
+    } catch (e) {
+        shelter.purge();
+        throw e;
+    }
     
     if (debug) {
 	console.log("Response:");
@@ -258,6 +282,7 @@ let r_shims = [];
 
 let value = null;
 let prefix = null;
+let timeout = 0;
 
 for (const arg of args) {
     if (arg == "--help") {
@@ -317,6 +342,13 @@ for (const arg of args) {
         value = arg.slice(prefix.length);
         r_epilogue_script = normalize_path(value, "host file");
         if (debug) console.log(`r_epilogue_script=${r_epilogue_script}`)
+    } else if (arg.startsWith((prefix = "--timeout="))) {
+        value = arg.slice(prefix.length);
+        timeout = parseFloat(value);
+        if (isNaN(timeout) || timeout < 0) {
+            error("Timeout must be a non-negative number of seconds: " + timeout);
+        }
+        if (debug) console.log(`timeout=${timeout}`);
     } else {
         if (r_exprs.length == 0 && r_script == null) {
             r_script = normalize_path(arg, "host file");
@@ -507,8 +539,7 @@ attach(list(install.packages = function(..., mount = FALSE) {
 }), name = "rw_shims", warn.conflicts = FALSE)
 `);
         } else {
-            console.error("ERROR: Unkown shim: '" + shim + "'");
-            process.exit(1);
+            error("Unknown shim: '" + shim + "'");
         }
     }
     if (code.length > 0) {
@@ -531,7 +562,7 @@ if (r_prologue_exprs.length > 0) {
         await webr_mount(r_stage_host, r_stage_webr, debug);
     }
 
-    await webr_eval_code(r_prologue_exprs, debug);
+    await webr_eval_code(r_prologue_exprs, timeout, debug);
 
     if (r_stage_host !== null) {
         await webr_unmount(r_stage_webr, debug);
@@ -543,7 +574,7 @@ if (r_prologue_exprs.length > 0) {
 
 // Main R code
 if (debug) console.log("Evaluate main R code ...")
-await webr_eval_code(r_exprs, debug);
+await webr_eval_code(r_exprs, timeout, debug);
 if (debug) console.log("Evaluate main R code ... done")
 
 
@@ -557,7 +588,7 @@ if (r_epilogue_exprs.length > 0) {
         await webr_mount(r_stage_host, r_stage_webr, debug);
     }
 
-    await webr_eval_code(r_epilogue_exprs, debug);
+    await webr_eval_code(r_epilogue_exprs, timeout, debug);
 
     if (r_stage_host !== null) {
         await webr_unmount(r_stage_webr, debug);
