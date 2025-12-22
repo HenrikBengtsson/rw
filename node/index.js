@@ -46,7 +46,8 @@ RWasm options:
   --epilogue-expr=<R code>      R code evaluated after main R code
   --expr=<R code>               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
-  --timeout=<seconds>           Maximum evaluation time in seconds
+  --timeout=<seconds>           Maximum evaluation time in seconds, before
+                                signaling an interrupt to R.
 
 Examples:
 
@@ -54,9 +55,9 @@ Examples:
 
   rw main.R
 
-  rw --timeout=3.5 --expr="{ Sys.sleep(5.0); 42 }"
-
-  rw --expr="cat(Sys.getenv('R_LIBS_USER'))"
+  ## Time out after 3.5 seconds
+  rw --timeout=3.5 --expr="slow <- function() { Sys.sleep(5); 42 }" \\
+                   --expr="tryCatch(slow(), interrupt = identity)"
 
   ## An R session with the R user library on host
   rw --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 main.R
@@ -220,9 +221,11 @@ async function webr_eval_code(code, timeout = 0, debug = false) {
     
     let timeoutPromise = new Promise((resolve, reject) => {
         if (timeout > 0) {
-            let id = setTimeout(() => {
+            setTimeout(() => {
+                // Signal an interrupt to R, which can be caught
+                // using tryCatch(..., interrupt = ...)
                 webR.interrupt();
-                reject(new Error(`Evaluation timed out after ${timeout} seconds`));
+//                reject(new Error(`Evaluation timed out after ${timeout} seconds`));
             }, 1000 * timeout);
         }
     });
