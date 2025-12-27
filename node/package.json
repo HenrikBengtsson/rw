@@ -1,6 +1,6 @@
 {
     "name": "@henrikbengtsson/rw",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "description": "Run Rscript within WebAssembly (WASM) via node.js",
     "keywords": [
         "webR",

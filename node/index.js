@@ -216,6 +216,8 @@ async function webr_eval_code(code, timeout = 0, debug = false) {
     if (debug) {
         console.log(`webr_eval_code(..., timeout = ${timeout}):`)
     }
+
+    code = code.join("\n");
     
     let shelter = await new webR.Shelter()
     
