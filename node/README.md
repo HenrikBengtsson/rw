@@ -1,5 +1,10 @@
 # rw: CLI for webR with Sandboxing Features
 
+_WARNING: This is work under development. I strongly recommend that
+you do not depend on it at this time. Please do not publish a package
+to NPM that depends on it._
+
+
 ## TL;DR
 
 The `rw` tools is an Rscript-like command-line-interface (CLI) tool
