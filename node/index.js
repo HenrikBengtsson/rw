@@ -193,7 +193,7 @@ async function webr_mkdirs(path, debug = false) {
 
 async function webr_mount(host, webr, debug = false) {
     if (debug) console.log(`Mounting '${host}' on host to '${webr}' in R WebAssembly`);
-    await webr_mkdirs(webr, debug = debug);
+    await webr_mkdirs(webr, debug);
     await webR.FS.mount("NODEFS", { root: host }, webr);
 }
 
@@ -429,7 +429,7 @@ if (r_libs_host !== null) {
 
 
 // Bind host directories to webR directories
-if (r_binds !== null) {
+if (r_binds.length > 0) {
     for (const bind of r_binds) {
         const parts = bind.split(":");
         if (parts.length == 1) parts.push(parts[0]);
