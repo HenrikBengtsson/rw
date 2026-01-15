@@ -432,7 +432,7 @@ if (r_libs_host !== null) {
 if (r_binds !== null) {
     for (const bind of r_binds) {
         const parts = bind.split(":");
-        if (parts.length == 1) parts.push(src);
+        if (parts.length == 1) parts.push(parts[0]);
         await webr_mount(parts[0], parts[1], debug);
     }
 }
