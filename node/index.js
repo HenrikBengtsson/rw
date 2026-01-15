@@ -192,7 +192,7 @@ async function webr_mkdirs(path, debug = false) {
 }
 
 async function webr_mount(host, webr, debug = false) {
-    if (debug) console.log(`Mounting '${webr}' to '${host}' on host`);
+    if (debug) console.log(`Mounting '${host}' on host to '${webr}' in R WebAssembly`);
     await webr_mkdirs(webr, debug = debug);
     await webR.FS.mount("NODEFS", { root: host }, webr);
 }
