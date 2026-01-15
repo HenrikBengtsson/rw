@@ -220,7 +220,8 @@ async function webr_eval_code(code, timeout = 0, debug = false) {
     code = code.join("\n");
     
     let shelter = await new webR.Shelter()
-    
+
+    let timeoutId = null;
     let timeoutPromise = new Promise((resolve, reject) => {
         if (timeout > 0) {
             code = "tryCatch({ " + code + " }, interrupt = function(int) { \
@@ -229,7 +230,7 @@ async function webr_eval_code(code, timeout = 0, debug = false) {
               msg <- sprintf('R exiting, because of %s%s', class(int)[1], msg); \
               stop(msg); \
             })"
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 // Signal an interrupt to R, which can be caught
                 // using tryCatch(..., interrupt = ...)
                 webR.interrupt();
@@ -253,10 +254,13 @@ async function webr_eval_code(code, timeout = 0, debug = false) {
     try {
         response = await Promise.race([capturePromise, timeoutPromise]);
     } catch (e) {
+        if (timeoutId !== null) clearTimeout(timeoutId);
         shelter.purge();
         throw e;
     }
-    
+
+    if (timeoutId !== null) clearTimeout(timeoutId);
+
     if (debug) {
 	console.log("Response:");
 	console.log(response);
