@@ -4,7 +4,6 @@ _WARNING: This is work under development. I strongly recommend that
 you do not depend on it at this time. Please do not publish a package
 to NPM that depends on it._
 
-
 ## TL;DR
 
 The `rw` tools is an Rscript-like command-line-interface (CLI) tool
@@ -100,7 +99,7 @@ Examples:
     --expr="data_out <- lapply(data_in, sqrt)"
   Rscript -e "data_out <- readRDS('stage/out.rds')" -e "utils::str(data_out)"
 
-Version: 0.0.10
+Version: 0.0.15
 License: MIT
 Author: Henrik Bengtsson
 ```
