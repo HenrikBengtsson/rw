@@ -1,6 +1,6 @@
 {
     "name": "@henrikbengtsson/rw",
-    "version": "0.0.20",
+    "version": "0.0.30",
     "description": "Run Rscript within WebAssembly (WASM) via node.js",
     "keywords": [
         "webR",
@@ -28,13 +28,15 @@
         "webr": "^0.5.8",
         "ws": "^8.18.3"
     },
-    "main": "index.mjs",
+    "main": "index.js",
     "bin": {
-        "rw": "index.js"
+        "rw": "cli.js"
     },
     "type": "module",
     "files": [
         "README.md",
-        "index.js"
+        "index.js",
+        "rw_session.js",
+        "cli.js"
     ]
 }
