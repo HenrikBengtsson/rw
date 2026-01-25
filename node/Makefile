@@ -4,6 +4,9 @@ all: install README.md
 
 .PHONY: help
 
+docs:
+	npx jsdoc index.js -d docs
+
 install:
 	npm install .
 	npm install -g .

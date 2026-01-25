@@ -37,7 +37,7 @@ rw: CLI for webR with Sandboxing Features
 Usage:
 
   rw [rwasm options] <script.R> [args]
-  
+
 RWasm options:
 
   --help                        Show this help
@@ -90,7 +90,7 @@ Examples:
   ## Evaluate parts of the R code that is untrusted in R WASM, with
   ## data passed in and out via a stage folder that trusted prologue
   ## and epilogue code has access to, but not the main code
-  mkdir stage
+  mkdir -p stage
   Rscript -e "saveRDS(list(a=1, b=2), 'stage/in.rds')"
   rw \
     --stage=stage \
@@ -99,7 +99,7 @@ Examples:
     --expr="data_out <- lapply(data_in, sqrt)"
   Rscript -e "data_out <- readRDS('stage/out.rds')" -e "utils::str(data_out)"
 
-Version: 0.0.15
+Version: 0.0.16
 License: MIT
 Author: Henrik Bengtsson
 ```
