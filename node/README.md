@@ -99,7 +99,7 @@ Examples:
     --expr="data_out <- lapply(data_in, sqrt)"
   Rscript -e "data_out <- readRDS('stage/out.rds')" -e "utils::str(data_out)"
 
-Version: 0.0.16
+Version: 0.0.30
 License: MIT
 Author: Henrik Bengtsson
 ```
