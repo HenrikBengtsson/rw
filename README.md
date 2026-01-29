@@ -21,4 +21,6 @@ it in the web browser at <https://webr.sh/>.
 
 See [node/README.md](./node/README.md) for further details.
 
+See [r/README.md](./r/README.md) for an R package API.
+
 [webR]: https://github.com/r-wasm/webr/
