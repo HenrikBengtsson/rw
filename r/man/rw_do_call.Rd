@@ -2,30 +2,82 @@
 % Please edit documentation in R/rw_do_call.R
 \name{rw_do_call}
 \alias{rw_do_call}
-\title{Call an R Function in R WASM}
+\title{Call an R Function in webR}
 \usage{
 rw_do_call(
-  fcn,
+  what,
   args = list(),
-  r_libs = Sys.getenv("RW_R_LIBS_USER", NA_character_)
+  quote = FALSE,
+  r_libs = NULL,
+  binds = NULL,
+  shims = NULL,
+  timeout = 0,
+  vanilla = FALSE,
+  debug = FALSE
 )
 }
 \arguments{
-\item{fcn}{A function.}
+\item{what}{(function) The function to call.}
 
-\item{args}{A list of arguments passed to \code{fcn}.}
+\item{args}{(list) A list of arguments to pass to the function.}
 
-\item{r_libs}{(optional) The R package library used by \code{rw}.}
+\item{quote}{(logical) If \code{TRUE}, the arguments in \code{args} are quoted
+and not evaluated before being passed to webR. Default is \code{FALSE}.}
+
+\item{r_libs}{(character string) Path to an R package library on the host
+to mount in webR. Defaults to the value of \code{RW_R_LIBS_USER} environment
+variable if set.}
+
+\item{binds}{(named character vector) Host directories to mount in webR.
+Names are the webR mount paths, values are the host paths. For example,
+\code{c("/host/data" = "/path/to/data")}.}
+
+\item{shims}{(character vector) Shims to install in R. Default is
+\code{"install.packages"}. Set to \code{character(0)} to disable.}
+
+\item{timeout}{(numeric) Maximum execution time in seconds. If exceeded,
+an interrupt signal is sent to R. Use 0.0 (default) for no timeout.}
+
+\item{vanilla}{(logical) If \code{TRUE}, run R with \code{--vanilla} flag.}
+
+\item{debug}{(logical) If \code{TRUE}, output debug information.}
 }
 \value{
-The object from call \code{do.call(fcn, args = args)} in R WASM.
+The return value of the function call, as evaluated in webR.
 }
 \description{
-Call an R Function in R WASM
+Executes a function call in webR and returns the result. This is
+useful for running R computations in a sandboxed environment while
+passing data between the host R session and webR.
+}
+\details{
+This function works by:
+\enumerate{
+\item Saving the function and arguments to an RDS file in a staging directory
+\item Using prologue code to load the data in webR
+\item Executing the function call as the main code
+\item Using epilogue code to save the result to an RDS file
+\item Reading the result back into the host R session
+}
 }
 \examples{
-# Evaluate Sys.info() in R WASM
+\dontrun{
+# Call Sys.info() in webR
 info <- rw_do_call(Sys.info)
 print(info)
 
+# Call a function with arguments
+result <- rw_do_call(sum, args = list(1:100))
+
+# Call a named function
+result <- rw_do_call("mean", args = list(x = c(1, 2, NA_real_), na.rm = TRUE))
+
+# Use a custom function
+my_func <- function(x, y) x + y
+result <- rw_do_call(my_func, args = list(x = 10, y = 20))
+}
+
+}
+\seealso{
+\code{\link[=rw]{rw()}}, \code{\link[=rw_eval]{rw_eval()}}, \code{\link[=rw_source]{rw_source()}}
 }

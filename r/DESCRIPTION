@@ -1,15 +1,18 @@
 Package: rw
-Version: 0.0.0-9002
-Imports:
-  tools,
-  utils
-Suggests:
-  future
-Authors@R: c(person("Henrik", "Bengtsson", role=c("aut", "cre", "cph"), email="henrikb@braju.com"))
-Title: R 'WebAssembly' (R 'Wasm') Utility Functions
-Description: Extensions to the 'rwasm' and 'webR' ecosystems.
-SystemRequirements: node (>= 17.0.0)
+Version: 0.0.1-9100
+Title: R API to the 'rw' CLI for webR
+Description: Provides an R interface to run R code in a sandboxed WebAssembly
+    (WASM) environment via Node.js and webR. The package wraps the 'rw' CLI
+    tool, enabling secure evaluation of untrusted R code isolated from the
+    host system.
+Authors@R: c(
+    person("Henrik", "Bengtsson",
+           role = c("aut", "cre", "cph"),
+           email = "henrikb@braju.com"))
 License: GPL (>= 3)
+Imports:
+    utils
+SystemRequirements: 'rw' command-line tool
 Language: en-US
 Encoding: UTF-8
 RoxygenNote: 7.3.3

@@ -1,24 +1,3 @@
-rwasm_repos <- function(default = "https://cran.r-universe.dev") {
-  repo <- getOption("repos")["RWASM"]
-  if (is.na(repo)) repo <- default
-  repo  
-}
-
-rwasm_contriburl <- function(repos = rwasm_repos(), r_version = r_info("%v")) {
-  sprintf("%s/bin/emscripten/contrib/%s", repos, r_version)
-}
-
-base_pkgs <- local({
-  pkgs <- NULL
-  function() {
-    if (is.null(pkgs)) {
-      db <- installed.packages(lib.loc = rev(.libPaths())[1], priority = "base")
-      pkgs <<- unique(db[, "Package"])
-    }
-    pkgs
-  }
-})
-
 #' Install R packages to the R user package library path in webR
 #'
 #' @inheritParams utils::install.packages
@@ -31,20 +10,20 @@ base_pkgs <- local({
 #'
 #' @examplesIf interactive()
 #' # Install the 'future' package
-#' install_packages("future")
+#' rw_install_packages("future")
 #' 
 #' # List all installed packages
 #' code <- c(
 #'   'db <- installed.packages()',
 #'   'cat(sort(paste(rownames(db), db[, "Version"])), sep = "\n")'
 #' )
-#' out <- rwasm_rscript(code = code)
+#' out <- rw_source(I(code))
 #' writeLines(out)
 #'
 #' @importFrom utils available.packages installed.packages file_test download.file untar
 #' @importFrom tools package_dependencies
 #' @export
-install_packages <- function(pkgs, lib = r_libs_user(), repos = rwasm_repos(), contriburl = rwasm_contriburl(repos = repos), available = available.packages(contriburl = contriburl), dependencies = NA) {
+rw_install_packages <- function(pkgs, lib = rw_r_libs_user(), repos = rw_repos(), contriburl = rw_contriburl(repos = repos), available = available.packages(contriburl = contriburl), dependencies = NA) {
   stopifnot(is.character(pkgs), !anyNA(pkgs), all(nzchar(pkgs)))
 
   if (!file_test("-d", lib)) dir.create(lib, recursive = TRUE)
@@ -98,21 +77,26 @@ install_packages <- function(pkgs, lib = r_libs_user(), repos = rwasm_repos(), c
 }
 
 
-#' Manage the R package library for webR
-#'
-#' @param path (character string) The path to the R package library
-#' on the host file system to be mounted as the R user package library
-#' in webR. Conversion specifiers as described in [base::R_LIBS_USER]
-#' are automatically expanded per `R.version` in webR.
-#'
-#' @return
-#' `r_libs_user()` returns the package library path for webR in
-#' `~/R/%p-library/%v`, where `%p` is the R platform and `%v` is the
-#' R 'x.y' version R  in webR, e.g.
-#' `~/R/wasm32-unknown-emscripten-library/4.5`.
-#' 
-#' @export
-r_libs_user <- function(path = "~/R/%p-library/%v") {
-  if (grepl("%.", path)) path <- r_info(path)
-  path
+
+base_pkgs <- local({
+  pkgs <- NULL
+  function() {
+    if (is.null(pkgs)) {
+      db <- installed.packages(lib.loc = rev(.libPaths())[1], priority = "base")
+      pkgs <<- unique(db[, "Package"])
+    }
+    pkgs
+  }
+})
+
+
+rw_repos <- function(default = "https://cran.r-universe.dev") {
+  repo <- getOption("repos")["RW"]
+  if (is.na(repo)) repo <- default
+  repo  
+}
+
+
+rw_contriburl <- function(repos = rw_repos(), r_version = rw_r_info("%v")) {
+  sprintf("%s/bin/emscripten/contrib/%s", repos, r_version)
 }

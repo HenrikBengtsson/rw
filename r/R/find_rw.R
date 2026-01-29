@@ -1,5 +1,12 @@
 #' Output the absolute pathname of the 'rw' command-line tool
 #'
+#' @param must_work (logical) If `TRUE`, an error is produced if the `rw`
+#' executable could not be found.
+#'
+#' @return
+#' The absolute pathname to the `rw` executable, if it exists,
+#' otherwise `NA_character_` or an error (`must_work = TRUE`).
+#'
 #' @section Usage from POSIX shell:
 #'
 #' ```sh
@@ -20,14 +27,39 @@
 #' $ rw --help
 #' ```
 #'
+#' @importFrom utils file_test
 #' @export
-find_rw <- function() {
-  pathname <- system.file(package = .packageName, "node", "rw", mustWork = TRUE)
-  cat(pathname, "\n", sep = "")
-  invisible(pathname)
-}
+find_rw <- local({
+  bin <- NULL
+  function(must_work = TRUE) {
+    if (!is.null(bin)) return(bin)
+
+    ## Try RW_BIN environment variable first
+    file <- Sys.getenv("RW_BIN", NA_character_)
+    if (!is.na(file) && nzchar(file)) {
+      if (file_test("-x", file)) {
+        bin <<- normalizePath(file, mustWork = TRUE)
+        return(bin)
+      }
+    }
+
+    ## Try PATH
+    file <- Sys.which("rw")
+    if (nzchar(file) && file_test("-x", file)) {
+      bin <<- normalizePath(file, mustWork = TRUE)
+      return(bin)
+    }
+
+    if (must_work) {
+      stop("Cannot find 'rw' CLI tool. ",
+           "Install it via 'npm install -g @henrikbengtsson/rw' or ",
+           "set the 'RW_BIN' environment variable",
+           call. = FALSE)
+    }
+
+    NA_character_
+  }
+})
 
 ## Expose function on the CLI
 cli_fcn(find_rw) <- character(0L)
-
-

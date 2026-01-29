@@ -4,7 +4,15 @@
 \alias{find_rw}
 \title{Output the absolute pathname of the 'rw' command-line tool}
 \usage{
-find_rw()
+find_rw(must_work = TRUE)
+}
+\arguments{
+\item{must_work}{(logical) If \code{TRUE}, an error is produced if the \code{rw}
+executable could not be found.}
+}
+\value{
+The absolute pathname to the \code{rw} executable, if it exists,
+otherwise \code{NA_character_} or an error (\code{must_work = TRUE}).
 }
 \description{
 Output the absolute pathname of the 'rw' command-line tool
