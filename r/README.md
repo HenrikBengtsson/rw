@@ -23,7 +23,15 @@ it in the web browser at <https://webr.sh/>.
 ## Installation
 
 ```sh
-remotes::install_github("HenrikBengtsson/rw/r")
+remotes::install_github("HenrikBengtsson/rw/r", subdir = "r")
 ```
+
+The package requires the `rw` command-line tool, which can be
+installed as:
+
+```sh
+npm install -g @henrikbengtsson/rw
+```
+
 
 [webR]: https://github.com/r-wasm/webr/
