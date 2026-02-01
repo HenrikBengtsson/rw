@@ -33,9 +33,6 @@
 #' # Call a function with arguments
 #' result <- rw_do_call(sum, args = list(1:100))
 #'
-#' # Call a named function
-#' result <- rw_do_call("mean", args = list(x = c(1, 2, NA_real_), na.rm = TRUE))
-#'
 #' # Use a custom function
 #' my_func <- function(x, y) x + y
 #' result <- rw_do_call(my_func, args = list(x = 10, y = 20))
