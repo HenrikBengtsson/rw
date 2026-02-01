@@ -5,16 +5,20 @@
 #' the `rw` CLI tool, enabling secure evaluation of untrusted R code
 #' isolated from the host system.
 #'
-#' @section Main Functions:
+#' @section Main R functions:
+#' \describe{
+#'   \item{[rw_do_call()]}{Call an R function with argument in webR and
+#'         return the result. Works similarly to [do.call()].}
+#' }
+#'
+#' @section Low-level functions for calling 'rw':
 #' \describe{
 #'   \item{[rw()]}{Run R code with full control over prologue/epilogue,
 #'     bindings, and sandboxing}
-#'   \item{[rw_eval()]}{Evaluate R expressions}
 #'   \item{[rw_source()]}{Source R scripts}
-#'   \item{[rw_do_call()]}{Call an R function and return the result}
 #' }
 #'
-#' @section Utility Functions:
+#' @section Utility functions:
 #' \describe{
 #'   \item{[rw_r_libs_user()]}{Get the R package library path for webR}
 #'   \item{[rw_version()], [rw_webr_version()],
@@ -23,7 +27,7 @@
 #'   \item{[rw_available()]}{Check if the `rw` CLI is available}
 #' }
 #'
-#' @section Sandboxing Model:
+#' @section Sandboxing model:
 #' The security model uses webR's isolation with controlled host directory
 #' access:
 #' \itemize{
@@ -33,7 +37,7 @@
 #'   \item **r_libs**: Mounted R package library available to all phases
 #' }
 #'
-#' @section Environment Variables:
+#' @section Environment variables:
 #' \describe{
 #'   \item{RW_BIN}{Path to the `rw` CLI executable}
 #'   \item{RW_R_LIBS_USER}{Default R library path for webR}

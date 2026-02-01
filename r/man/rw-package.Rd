@@ -10,18 +10,24 @@ WebAssembly (Wasm) environment via Node.js and webR. The package wraps
 the \code{rw} CLI tool, enabling secure evaluation of untrusted R code
 isolated from the host system.
 }
-\section{Main Functions}{
+\section{Main R functions}{
+
+\describe{
+\item{\code{\link[=rw_do_call]{rw_do_call()}}}{Call an R function with argument in webR and
+return the result. Works similarly to \code{\link[=do.call]{do.call()}}.}
+}
+}
+
+\section{Low-level functions for calling 'rw'}{
 
 \describe{
 \item{\code{\link[=rw]{rw()}}}{Run R code with full control over prologue/epilogue,
 bindings, and sandboxing}
-\item{\code{\link[=rw_eval]{rw_eval()}}}{Evaluate R expressions}
 \item{\code{\link[=rw_source]{rw_source()}}}{Source R scripts}
-\item{\code{\link[=rw_do_call]{rw_do_call()}}}{Call an R function and return the result}
 }
 }
 
-\section{Utility Functions}{
+\section{Utility functions}{
 
 \describe{
 \item{\code{\link[=rw_r_libs_user]{rw_r_libs_user()}}}{Get the R package library path for webR}
@@ -32,7 +38,7 @@ bindings, and sandboxing}
 }
 }
 
-\section{Sandboxing Model}{
+\section{Sandboxing model}{
 
 The security model uses webR's isolation with controlled host directory
 access:
@@ -44,7 +50,7 @@ access:
 }
 }
 
-\section{Environment Variables}{
+\section{Environment variables}{
 
 \describe{
 \item{RW_BIN}{Path to the \code{rw} CLI executable}

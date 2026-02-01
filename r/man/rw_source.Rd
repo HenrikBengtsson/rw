@@ -78,5 +78,5 @@ rw_source("analysis.R", r_libs = "~/R/wasm32-unknown-emscripten-library/4.5")
 
 }
 \seealso{
-\code{\link[=rw]{rw()}}, \code{\link[=rw_eval]{rw_eval()}}, \code{\link[=rw_do_call]{rw_do_call()}}
+\code{\link[=rw]{rw()}}
 }

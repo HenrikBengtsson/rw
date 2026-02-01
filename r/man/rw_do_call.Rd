@@ -76,5 +76,5 @@ result <- rw_do_call(my_func, args = list(x = 10, y = 20))
 
 }
 \seealso{
-\code{\link[=rw]{rw()}}, \code{\link[=rw_eval]{rw_eval()}}, \code{\link[=rw_source]{rw_source()}}
+Internally, \code{\link[=rw]{rw()}} is used.
 }

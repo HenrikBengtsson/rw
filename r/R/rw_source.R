@@ -24,7 +24,7 @@
 #' rw_source("analysis.R", r_libs = "~/R/wasm32-unknown-emscripten-library/4.5")
 #' }
 #'
-#' @seealso [rw()], [rw_eval()], [rw_do_call()]
+#' @seealso [rw()]
 #'
 #' @importFrom utils file_test
 #' @export

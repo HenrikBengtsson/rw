@@ -38,7 +38,8 @@
 #' result <- rw_do_call(my_func, args = list(x = 10, y = 20))
 #' }
 #'
-#' @seealso [rw()], [rw_eval()], [rw_source()]
+#' @seealso
+#' Internally, [rw()] is used.
 #'
 #' @importFrom utils file_test
 #' @export

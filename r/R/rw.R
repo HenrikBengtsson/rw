@@ -78,7 +78,7 @@
 #' result <- readRDS(file.path(stage_dir, "output.rds"))
 #' }
 #'
-#' @seealso [rw_eval()], [rw_source()], [rw_do_call()]
+#' @seealso [rw_source()]
 #'
 #' @importFrom utils file_test
 #' @export

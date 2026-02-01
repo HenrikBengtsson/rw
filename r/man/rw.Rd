@@ -105,5 +105,5 @@ result <- readRDS(file.path(stage_dir, "output.rds"))
 
 }
 \seealso{
-\code{\link[=rw_eval]{rw_eval()}}, \code{\link[=rw_source]{rw_source()}}, \code{\link[=rw_do_call]{rw_do_call()}}
+\code{\link[=rw_source]{rw_source()}}
 }
