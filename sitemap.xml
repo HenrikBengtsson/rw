@@ -1,0 +1,19 @@
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>/404.html</loc></url>
+<url><loc>/authors.html</loc></url>
+<url><loc>/index.html</loc></url>
+<url><loc>/news/index.html</loc></url>
+<url><loc>/reference/find_rw.html</loc></url>
+<url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/rw-package.html</loc></url>
+<url><loc>/reference/rw.html</loc></url>
+<url><loc>/reference/rw_available.html</loc></url>
+<url><loc>/reference/rw_config.html</loc></url>
+<url><loc>/reference/rw_do_call.html</loc></url>
+<url><loc>/reference/rw_install_packages.html</loc></url>
+<url><loc>/reference/rw_r_libs_user.html</loc></url>
+<url><loc>/reference/rw_r_version_info.html</loc></url>
+<url><loc>/reference/rw_source.html</loc></url>
+<url><loc>/reference/version-functions.html</loc></url>
+</urlset>
+
