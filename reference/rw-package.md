@@ -70,6 +70,14 @@ access:
 
   Default staging directory
 
+## See also
+
+Useful links:
+
+- <https://github.com/HenrikBengtsson/rw/tree/develop/r>
+
+- Report bugs at <https://github.com/HenrikBengtsson/rw/issues>
+
 ## Author
 
 **Maintainer**: Henrik Bengtsson <henrikb@braju.com> \[copyright

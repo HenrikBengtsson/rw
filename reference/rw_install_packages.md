@@ -87,7 +87,7 @@ if (FALSE) { # interactive()
 rw_install_packages("future")
 
 # List all installed packages
-pkgs <- rw_do_call(utils::installed.packages)
+pkgs <- rw_do_call(utils::installed.packages, r_libs = rw_r_libs_user())
 print(rownames(pkgs))
 }
 ```
