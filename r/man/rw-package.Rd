@@ -59,6 +59,14 @@ access:
 }
 }
 
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/HenrikBengtsson/rw/tree/develop/r}
+  \item Report bugs at \url{https://github.com/HenrikBengtsson/rw/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Henrik Bengtsson \email{henrikb@braju.com} [copyright holder]
 
