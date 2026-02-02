@@ -19,10 +19,6 @@ A character string with the expanded library path, e.g.
 Returns the conventional path for the R user package library for webR
 on the host file system.
 }
-\details{
-The webR R version is determined by calling \code{rw --r-version} the first
-time this function is called.
-}
 \section{Environment Variables}{
 
 If the \code{RW_R_LIBS_USER} environment variable is set, it is returned

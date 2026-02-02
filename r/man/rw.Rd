@@ -36,8 +36,7 @@ directory if specified.}
 source before/after the main code.}
 
 \item{r_libs}{(character string) Path to an R package library on the host
-to mount in webR. Defaults to the value of \code{RW_R_LIBS_USER} environment
-variable if set.}
+to mount in webR. The recommended path is \code{\link[=rw_r_libs_user]{rw_r_libs_user()}}.}
 
 \item{binds}{(named character vector) Host directories to mount in webR.
 Names are the webR mount paths, values are the host paths. For example,

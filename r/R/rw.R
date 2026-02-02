@@ -17,8 +17,7 @@
 #'   source before/after the main code.
 #'
 #' @param r_libs (character string) Path to an R package library on the host
-#'   to mount in webR. Defaults to the value of `RW_R_LIBS_USER` environment
-#'   variable if set.
+#'   to mount in webR. The recommended path is [rw_r_libs_user()].
 #'
 #' @param binds (named character vector) Host directories to mount in webR.
 #'   Names are the webR mount paths, values are the host paths. For example,

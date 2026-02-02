@@ -11,10 +11,6 @@
 #' A character string with the expanded library path, e.g.
 #' `~/R/wasm32-unknown-emscripten-library/4.5`.
 #'
-#' @details
-#' The webR R version is determined by calling `rw --r-version` the first
-#' time this function is called.
-#'
 #' @section Environment Variables:
 #' If the `RW_R_LIBS_USER` environment variable is set, it is returned
 #' instead of the default path.
