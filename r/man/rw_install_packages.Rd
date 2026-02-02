@@ -85,11 +85,7 @@ Install R packages to the R user package library path in webR
 rw_install_packages("future")
 
 # List all installed packages
-code <- c(
-  'db <- installed.packages()',
-  'cat(sort(paste(rownames(db), db[, "Version"])), sep = "\n")'
-)
-out <- rw_source(I(code))
-writeLines(out)
+pkgs <- rw_do_call(utils::installed.packages)
+print(rownames(pkgs))
 \dontshow{\}) # examplesIf}
 }
