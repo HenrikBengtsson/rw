@@ -15,5 +15,7 @@ Imports:
 SystemRequirements: 'rw' command-line tool
 Language: en-US
 Encoding: UTF-8
+URL: https://github.com/HenrikBengtsson/rw/tree/develop/r
+BugReports: https://github.com/HenrikBengtsson/rw/issues
 RoxygenNote: 7.3.3
 Roxygen: list(markdown = TRUE)

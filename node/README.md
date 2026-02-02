@@ -23,6 +23,9 @@ it in the web browser at <https://webr.sh/>.
 
 ## Installation
 
+Install the package from NPM
+(<https://www.npmjs.com/package/@henrikbengtsson/rw>) as:
+
 ```sh
 npm install -g @henrikbengtsson/rw
 ```
