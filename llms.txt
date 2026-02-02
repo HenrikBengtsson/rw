@@ -1,0 +1,52 @@
+# rw: Evaluate R Expressions withing R WebAssembly
+
+## TL;DR
+
+The **rw** R package allows you to evaluate R code within R WebAssembly
+as implemented by **[webR](https://github.com/r-wasm/webr/)**, e.g.
+
+``` sh
+> rw::rw_do_call(Sys.info)
+       sysname        release        version       nodename        machine 
+  "Emscripten"        "4.0.8"           "#1"   "emscripten"       "wasm32" 
+         login           user effective_user 
+    "web_user"      "unknown"      "unknown" 
+```
+
+This can be useful when we need to evaluate arbitrary, untrusted R code
+in a secure manner isolated from the host system. It is also useful for
+making sure R code and R packages work in **webR** without having to go
+the extra mile to upload packages online and then testing it in the web
+browser at <https://webr.sh/>.
+
+## Installation
+
+``` sh
+remotes::install_github("HenrikBengtsson/rw/r", subdir = "r")
+```
+
+The package requires the `rw` command-line tool, which can be installed
+as:
+
+``` sh
+npm install -g @henrikbengtsson/rw
+```
+
+# Package index
+
+## All functions
+
+- [`find_rw()`](find_rw.md) : Output the absolute pathname of the 'rw'
+  command-line tool
+- [`rw-package`](rw-package.md) : rw: R API to the 'rw' Node.js CLI for
+  webR
+- [`rw()`](rw.md) : Run R Code in webR (WebAssembly)
+- [`rw_available()`](rw_available.md) : Check if rw CLI is Available
+- [`rw_config()`](rw_config.md) : Get webR Configuration Information
+- [`rw_do_call()`](rw_do_call.md) : Call an R Function in webR
+- [`rw_install_packages()`](rw_install_packages.md) : Install R packages
+  to the R user package library path in webR
+- [`rw_r_libs_user()`](rw_r_libs_user.md) : Get the R Package Library
+  Path for webR
+- [`rw_source()`](rw_source.md) : Source an R Script in webR
+
