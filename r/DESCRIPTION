@@ -1,5 +1,5 @@
 Package: rw
-Version: 0.1.0-9003
+Version: 0.1.0-9004
 Title: R API to the 'rw' CLI for webR
 Description: Provides an R interface to run R code in a sandboxed WebAssembly
     (WASM) environment via Node.js and webR. The package wraps the 'rw' CLI
@@ -8,7 +8,12 @@ Description: Provides an R interface to run R code in a sandboxed WebAssembly
 Authors@R: c(
     person("Henrik", "Bengtsson",
            role = c("aut", "cre", "cph"),
-           email = "henrikb@braju.com"))
+           email = "henrikb@braju.com"),
+    person("R Consortium",
+           role = "fnd",
+           comment = c(ROR = "https://ror.org/01z833950")
+    )
+  )
 License: GPL (>= 3)
 Imports:
     utils

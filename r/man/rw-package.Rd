@@ -70,4 +70,9 @@ Useful links:
 \author{
 \strong{Maintainer}: Henrik Bengtsson \email{henrikb@braju.com} [copyright holder]
 
+Other contributors:
+\itemize{
+  \item R Consortium (\href{https://ror.org/01z833950}{ROR}) [funder]
+}
+
 }
