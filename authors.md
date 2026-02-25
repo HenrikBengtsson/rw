@@ -5,7 +5,7 @@
 - **Henrik Bengtsson**. Author, maintainer, copyright holder.
 
 - **R Consortium**. Funder.
-  [![ROR](https://raw.githubusercontent.com/ror-community/ror-logos/main/ror-icon-rgb.svg)](https://ror.org/https://ror.org/01z833950)
+  [![ROR](https://raw.githubusercontent.com/ror-community/ror-logos/main/ror-icon-rgb.svg)](https://ror.org/01z833950)
 
 ## Citation
 
