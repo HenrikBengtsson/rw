@@ -82,3 +82,7 @@ Useful links:
 
 **Maintainer**: Henrik Bengtsson <henrikb@braju.com> \[copyright
 holder\]
+
+Other contributors:
+
+- R Consortium ([ROR](https://ror.org/01z833950)) \[funder\]
