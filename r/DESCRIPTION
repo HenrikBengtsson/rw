@@ -11,7 +11,7 @@ Authors@R: c(
            email = "henrikb@braju.com"),
     person("R Consortium",
            role = "fnd",
-           comment = c(ROR = "https://ror.org/01z833950")
+           comment = c(ROR = "01z833950")
     )
   )
 License: GPL (>= 3)
