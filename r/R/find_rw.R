@@ -63,3 +63,4 @@ find_rw <- local({
 
 ## Expose function on the CLI
 cli_fcn(find_rw) <- character(0L)
+attr(find_rw, "output") <- function(x) cat(x, sep = "\n")
