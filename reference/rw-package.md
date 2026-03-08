@@ -74,9 +74,9 @@ access:
 
 Useful links:
 
-- <https://github.com/HenrikBengtsson/rw/tree/develop/r>
+- <https://github.com/futureverse/rw/tree/develop/r>
 
-- Report bugs at <https://github.com/HenrikBengtsson/rw/issues>
+- Report bugs at <https://github.com/futureverse/rw/issues>
 
 ## Author
 
