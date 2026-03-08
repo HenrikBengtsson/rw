@@ -1,5 +1,5 @@
 Package: rw
-Version: 0.1.0-9005
+Version: 0.1.0-9006
 Title: R API to the 'rw' CLI for webR
 Description: Provides an R interface to run R code in a sandboxed WebAssembly
     (WASM) environment via Node.js and webR. The package wraps the 'rw' CLI
@@ -20,7 +20,7 @@ Imports:
 SystemRequirements: 'rw' command-line tool
 Language: en-US
 Encoding: UTF-8
-URL: https://github.com/HenrikBengtsson/rw/tree/develop/r
-BugReports: https://github.com/HenrikBengtsson/rw/issues
+URL: https://github.com/futureverse/rw/tree/develop/r
+BugReports: https://github.com/futureverse/rw/issues
 RoxygenNote: 7.3.3
 Roxygen: list(markdown = TRUE)

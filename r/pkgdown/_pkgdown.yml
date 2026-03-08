@@ -1,0 +1,10 @@
+navbar:
+  structure:
+    right: [search, github, lightswitch]
+  components:
+      
+search:
+
+template:
+  bootstrap: 5
+  light-switch: true

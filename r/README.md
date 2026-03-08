@@ -23,7 +23,7 @@ it in the web browser at <https://webr.sh/>.
 ## Installation
 
 ```sh
-remotes::install_github("HenrikBengtsson/rw/r", subdir = "r")
+remotes::install_github("futureverse/rw", subdir = "r")
 ```
 
 The package requires the `rw` command-line tool, which can be

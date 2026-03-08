@@ -1,4 +1,12 @@
-Makefile
-.local
-
-
+#----------------------------
+# Git and SVN related
+#----------------------------
+^.pre-commit-config.yaml$
+^.git
+^README.*[.]md$
+^CONDUCT[.]md$
+^CONTRIBUTING[.]md$
+^docs
+^pkgdown
+^.local
+^Makefile
