@@ -13,6 +13,86 @@ import {
     get_r_info
 } from "./rw_session.js";
 
+const RWCONFIG_PATH = "./.rwconfig";
+
+/**
+ * Load ./.rwconfig key=value pairs. Lines starting with '#' and blank lines
+ * are ignored. Returns an empty object if the file does not exist.
+ * @returns {Object} Parsed config fields
+ */
+function load_rwconfig() {
+    if (!fs.existsSync(RWCONFIG_PATH)) return {};
+    const config = {};
+    for (const line of fs.readFileSync(RWCONFIG_PATH, "utf8").split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eq = trimmed.indexOf("=");
+        if (eq === -1) continue;
+        config[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
+    }
+    return config;
+}
+
+/**
+ * Write (or update) a single field in ./.rwconfig.
+ * @param {string} field
+ * @param {string} value
+ */
+function write_rwconfig(field, value) {
+    let content = fs.existsSync(RWCONFIG_PATH)
+        ? fs.readFileSync(RWCONFIG_PATH, "utf8")
+        : "";
+    const lines = content.split("\n");
+    let found = false;
+    const updated = lines.map(line => {
+        const trimmed = line.trim();
+        const eq = trimmed.indexOf("=");
+        if (eq !== -1 && trimmed.slice(0, eq).trim() === field) {
+            found = true;
+            return `${field}=${value}`;
+        }
+        return line;
+    });
+    if (found) {
+        fs.writeFileSync(RWCONFIG_PATH, updated.join("\n"), "utf8");
+    } else {
+        if (content && !content.endsWith("\n")) content += "\n";
+        fs.writeFileSync(RWCONFIG_PATH, content + `${field}=${value}\n`, "utf8");
+    }
+}
+
+/**
+ * Remove a field from ./.rwconfig. Returns true if the field was found.
+ * @param {string} field
+ * @returns {boolean}
+ */
+function unset_rwconfig(field) {
+    if (!fs.existsSync(RWCONFIG_PATH)) return false;
+    const lines = fs.readFileSync(RWCONFIG_PATH, "utf8").split("\n");
+    let found = false;
+    const updated = lines.filter(line => {
+        const trimmed = line.trim();
+        const eq = trimmed.indexOf("=");
+        if (eq !== -1 && trimmed.slice(0, eq).trim() === field) {
+            found = true;
+            return false;
+        }
+        return true;
+    });
+    if (found) fs.writeFileSync(RWCONFIG_PATH, updated.join("\n"), "utf8");
+    return found;
+}
+
+/**
+ * Validate a sandbox value, throwing if unsupported.
+ * @param {string} value
+ */
+function validate_sandbox(value) {
+    if (value !== "webr") {
+        throw new Error(`Unknown sandbox: '${value}'. Only 'webr' is supported.`);
+    }
+}
+
 function show_help() {
     console.log(`
 rw: CLI for Sandboxed R Execution
@@ -22,8 +102,12 @@ Usage:
   rw [options] <script.R> [args]
   rw [options] --expr="..."
   rw [options] --persistent install <pkg> [pkg ...]
+  rw env list
+  rw env get <field>
   rw config list
   rw config get <field>
+  rw config set <field> <value>
+  rw config unset <field>
 
 Options (general):
   --help                        Show this help
@@ -37,7 +121,7 @@ Options (sandboxing):
                                   shims=<shim>[,<shim>] — comma-separated shims
                                   (default: 'install.packages')
   --r-libs=<host-dir>           Bind R user library to host directory
-                                (default: '$RW_R_LIBS_USER')
+                                (default: r-libs in ./.rwconfig, then '$RW_R_LIBS_USER')
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
   --bastion=<host-dir>          Bind host directory available to prologue and
@@ -75,13 +159,16 @@ Examples:
     --expr="data_out <- lapply(data_in, sqrt)"
   Rscript -e "data_out <- readRDS('bastion/out.rds')" -e "utils::str(data_out)"
 
-  ## Show all configuration
-  rw config list
+  ## Show runtime environment (R/webR versions, resolved paths, etc.)
+  rw env list
+  rw env get r-version
+  rw env get webr-version
+  rw env get rw_suggestions:RW_R_LIBS_USER
 
-  ## Query specific configuration fields
-  rw config get r-version
-  rw config get webr-version
-  rw config get rw_suggestions:RW_R_LIBS_USER
+  ## Show and manage ./.rwconfig settings
+  rw config list
+  rw config get r-libs
+  rw config set r-libs ~/R/wasm32-unknown-emscripten-library/4.5
 
   ## An R session with the R user library on host
   rw --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 main.R
@@ -105,7 +192,7 @@ Author: ${author}
 export function parse_args(args) {
     const options = {
         debug: false,
-        sandbox: "webr",
+        sandbox: null,
         webr_args: [],
         r_libs_host: null,
         binds: [],
@@ -125,9 +212,10 @@ export function parse_args(args) {
     };
 
     const command = {
-        type: null,           // null | "config" | "install"
-        config_action: null,  // "list" | "get"
-        config_field: null,
+        type: null,    // null | "env" | "config" | "install"
+        action: null,  // "list" | "get" | "set"
+        field: null,
+        value: null,
         install_packages: []
     };
 
@@ -154,10 +242,7 @@ export function parse_args(args) {
             options.exprs.push(value);
         } else if (arg.startsWith((prefix = "--sandbox="))) {
             value = arg.slice(prefix.length);
-            if (value !== "webr") {
-                throw new Error(`Unknown sandbox: '${value}'. Only 'webr' is supported.`);
-            }
-            options.sandbox = value;
+            options.sandbox = value;  // explicit CLI flag
         } else if (arg.startsWith((prefix = "--sandbox-opt="))) {
             value = arg.slice(prefix.length);
             const eq = value.indexOf("=");
@@ -214,7 +299,9 @@ export function parse_args(args) {
                 // After "install", all non-option args are package names
                 command.install_packages.push(arg);
             } else if (command.type === null && options.exprs.length === 0 && r_script === null) {
-                if (arg === "config") {
+                if (arg === "env") {
+                    command.type = "env";
+                } else if (arg === "config") {
                     command.type = "config";
                 } else if (arg === "install") {
                     command.type = "install";
@@ -222,13 +309,33 @@ export function parse_args(args) {
                     r_script = normalize_path(arg, "host file");
                     if (options.debug) console.log(`r_script=${r_script}`);
                 }
+            } else if (command.type === "env") {
+                if (arg === "list") {
+                    command.action = "list";
+                } else if (arg === "get") {
+                    command.action = "get";
+                } else if (command.action === "get" && command.field === null) {
+                    command.field = arg;
+                } else {
+                    throw new Error(`Unexpected argument for 'rw env': ${arg}`);
+                }
             } else if (command.type === "config") {
                 if (arg === "list") {
-                    command.config_action = "list";
+                    command.action = "list";
                 } else if (arg === "get") {
-                    command.config_action = "get";
-                } else if (command.config_action === "get" && command.config_field === null) {
-                    command.config_field = arg;
+                    command.action = "get";
+                } else if (arg === "set") {
+                    command.action = "set";
+                } else if (arg === "unset") {
+                    command.action = "unset";
+                } else if (command.action === "get" && command.field === null) {
+                    command.field = arg;
+                } else if (command.action === "unset" && command.field === null) {
+                    command.field = arg;
+                } else if (command.action === "set" && command.field === null) {
+                    command.field = arg;
+                } else if (command.action === "set" && command.value === null) {
+                    command.value = arg;
                 } else {
                     throw new Error(`Unexpected argument for 'rw config': ${arg}`);
                 }
@@ -259,6 +366,22 @@ export function parse_args(args) {
         throw new Error("R epilogue script must not be specified when R epilogue expressions are specified");
     } else if (r_epilogue_script !== null) {
         options.epilogue_exprs = read_code(r_epilogue_script, "epilogue", options.debug);
+    }
+
+    // Apply ./.rwconfig defaults (lower precedence than CLI flags, higher than env vars)
+    const rwconfig = load_rwconfig();
+    if (options.sandbox === null && rwconfig["sandbox"]) {
+        options.sandbox = rwconfig["sandbox"];
+        if (options.debug) console.log(`sandbox=${options.sandbox} (from .rwconfig)`);
+    }
+    if (options.sandbox === null) options.sandbox = "webr";
+    if (options.r_libs_host === null && rwconfig["r-libs"]) {
+        options.r_libs_host = normalize_path(rwconfig["r-libs"], "host directory");
+        if (options.debug) console.log(`r_libs_host=${options.r_libs_host} (from .rwconfig)`);
+    }
+    if (options.bastion_host === null && rwconfig["bastion"]) {
+        options.bastion_host = normalize_path(rwconfig["bastion"], "host directory");
+        if (options.debug) console.log(`bastion_host=${options.bastion_host} (from .rwconfig)`);
     }
 
     // Apply environment variables
@@ -326,26 +449,78 @@ async function main() {
     }
 
     // Handle subcommands
-    if (command.type === "config") {
-        if (command.config_action === "list") {
+    if (command.type === "env") {
+        if (command.action === "list") {
             await get_r_info();
-        } else if (command.config_action === "get") {
-            if (command.config_field === null) {
-                console.error("ERROR: 'rw config get' requires a field name");
+        } else if (command.action === "get") {
+            if (command.field === null) {
+                console.error("ERROR: 'rw env get' requires a field name");
                 process.exit(1);
             }
-            if (command.config_field === "webr-version") {
+            if (command.field === "webr-version") {
                 console.log(await get_webr_version());
-            } else if (command.config_field === "r-version") {
+            } else if (command.field === "r-version") {
                 await get_r_version();
             } else {
-                await get_r_info(command.config_field);
+                await get_r_info(command.field);
             }
         } else {
-            console.error("ERROR: Unknown config action. Use 'rw config list' or 'rw config get <field>'");
+            console.error("ERROR: Unknown env action. Use 'rw env list' or 'rw env get <field>'");
             process.exit(1);
         }
         process.exit(0);
+    }
+
+    if (command.type === "config") {
+        if (command.action === "list") {
+            const rwconfig = load_rwconfig();
+            const entries = Object.entries(rwconfig);
+            if (entries.length === 0) {
+                console.log("(no settings in .rwconfig)");
+            } else {
+                for (const [k, v] of entries) console.log(`${k}=${v}`);
+            }
+        } else if (command.action === "get") {
+            if (command.field === null) {
+                console.error("ERROR: 'rw config get' requires a field name");
+                process.exit(1);
+            }
+            const rwconfig = load_rwconfig();
+            if (Object.prototype.hasOwnProperty.call(rwconfig, command.field)) {
+                console.log(rwconfig[command.field]);
+            } else {
+                console.error(`ERROR: '${command.field}' is not set in .rwconfig`);
+                process.exit(1);
+            }
+        } else if (command.action === "set") {
+            if (!command.field || command.value === null) {
+                console.error("ERROR: 'rw config set' requires a field name and a value");
+                process.exit(1);
+            }
+            write_rwconfig(command.field, command.value);
+            console.log(`${command.field}=${command.value}`);
+        } else if (command.action === "unset") {
+            if (!command.field) {
+                console.error("ERROR: 'rw config unset' requires a field name");
+                process.exit(1);
+            }
+            if (!unset_rwconfig(command.field)) {
+                console.error(`ERROR: '${command.field}' is not set in .rwconfig`);
+                process.exit(1);
+            }
+        } else {
+            console.error("ERROR: Unknown config action. Use 'rw config list', 'rw config get <field>', 'rw config set <field> <value>', or 'rw config unset <field>'");
+            process.exit(1);
+        }
+        process.exit(0);
+    }
+
+    // Validate sandbox before any operation that uses it
+    try {
+        validate_sandbox(options.sandbox);
+    } catch (e) {
+        console.error("ERROR: " + e.message);
+        process.exit(1);
     }
 
     if (command.type === "install") {
