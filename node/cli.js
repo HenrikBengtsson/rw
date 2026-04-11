@@ -123,7 +123,8 @@ Options (sandboxing):
                                   (default: sandbox-opt in ./.rwconfig,
                                   or 'shims=install.packages')
   --r-libs-user=<host-dir>      Bind R user library to host directory
-                                (default: r-libs-user in ./.rwconfig)
+                                (only active with --persistent;
+                                default: r-libs-user in ./.rwconfig)
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
   --bastion=<host-dir>          Bind host directory available to prologue and
@@ -398,6 +399,14 @@ export function parse_args(args) {
         }
     }
     if (options.sandbox === null) options.sandbox = "webr";
+
+    // r-libs-user is only honoured when --persistent is set
+    if (!options.persistent) {
+        if (options.r_libs_user !== null && options.debug) {
+            console.log("Ignoring r-libs-user (requires --persistent)");
+        }
+        options.r_libs_user = null;
+    }
 
     // Apply environment variables
     if (options.bastion_host === null && fs.existsSync("bastion")) {
