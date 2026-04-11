@@ -554,7 +554,6 @@ export async function get_r_info(field = null) {
         'lines <- c(lines, sprintf("localization:%s=%s", names(values), values))',
         'values <- strsplit(Sys.getenv("R_LIBS_USER"), split = ":", fixed = TRUE)[[1]]',
         'values <- gsub(sprintf("^%s", normalizePath("~")), "~", values)',
-        'values <- c(RW_R_LIBS_USER = paste(values, collapse = ":"))',
         'lines <- c(lines, sprintf("rw_suggestions:%s=%s", names(values), values))',
         'lines <- sort(lines)'
     ];

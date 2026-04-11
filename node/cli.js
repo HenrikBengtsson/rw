@@ -120,7 +120,8 @@ Options (sandboxing):
   --sandbox=<sandbox>           Sandbox runtime (default: 'webr')
   --sandbox-opt=<key>=<value>   Sandbox-specific option (repeatable)
                                   shims=<shim>[,<shim>] — comma-separated shims
-                                  (default: 'shims=install.packages')
+                                  (default: sandbox-opt in ./.rwconfig,
+                                  or 'shims=install.packages')
   --r-libs-user=<host-dir>      Bind R user library to host directory
                                 (default: r-libs-user in ./.rwconfig)
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
@@ -371,8 +372,8 @@ export function parse_args(args) {
     }
 
     // Apply ./.rwconfig defaults (lower precedence than CLI flags, higher than env vars)
+    const rwconfig = options.no_config ? {} : load_rwconfig();
     if (!options.no_config) {
-        const rwconfig = load_rwconfig();
         if (options.sandbox === null && rwconfig["sandbox"]) {
             options.sandbox = rwconfig["sandbox"];
             if (options.debug) console.log(`sandbox=${options.sandbox} (from .rwconfig)`);
@@ -393,22 +394,20 @@ export function parse_args(args) {
         options.bastion_host = normalize_path("bastion", "host directory");
     }
 
-    // Apply default shims
+    // Apply default shims (from .rwconfig, then built-in default)
     if (options.shims.length === 0) {
-        if (options.debug) console.log("Using default R shims ...");
-        const env_sandbox_opt = process.env.RW_SANDBOX_OPT;
-        if (env_sandbox_opt) {
-            if (options.debug) console.log("RW_SANDBOX_OPT: '" + env_sandbox_opt + "'");
-            const eq = env_sandbox_opt.indexOf("=");
-            if (eq !== -1) {
-                const key = env_sandbox_opt.slice(0, eq);
-                const val = env_sandbox_opt.slice(eq + 1);
-                if (key === "shims") {
-                    options.shims = val.split(",").filter(str => str !== "");
+        if (!options.no_config) {
+            const rwconfig_opt = rwconfig["sandbox-opt"];
+            if (rwconfig_opt) {
+                if (options.debug) console.log(`sandbox-opt=${rwconfig_opt} (from .rwconfig)`);
+                const eq = rwconfig_opt.indexOf("=");
+                if (eq !== -1 && rwconfig_opt.slice(0, eq).trim() === "shims") {
+                    options.shims = rwconfig_opt.slice(eq + 1).split(",").filter(str => str !== "");
                 }
             }
         }
         if (options.shims.length === 0) {
+            if (options.debug) console.log("Using default R shims ...");
             options.shims = ["install.packages"];
         }
     } else {
