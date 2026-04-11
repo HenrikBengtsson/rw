@@ -133,7 +133,9 @@ Options (sandboxing):
   --prologue=<R script>         R script evaluated before main R code
   --epilogue=<R script>         R script evaluated after main R code
   --prologue-expr=<R code>      R code evaluated before main R code
+                                (default: prologue-expr in ./.rwconfig)
   --epilogue-expr=<R code>      R code evaluated after main R code
+                                (default: epilogue-expr in ./.rwconfig)
   --persistent                  Persist changes to host (required for 'install')
 
 Options (evaluation):
@@ -385,6 +387,14 @@ export function parse_args(args) {
         if (options.bastion_host === null && rwconfig["bastion"]) {
             options.bastion_host = normalize_path(rwconfig["bastion"], "host directory");
             if (options.debug) console.log(`bastion_host=${options.bastion_host} (from .rwconfig)`);
+        }
+        if (options.prologue_exprs.length === 0 && rwconfig["prologue-expr"]) {
+            options.prologue_exprs.push(rwconfig["prologue-expr"]);
+            if (options.debug) console.log(`prologue_expr=${rwconfig["prologue-expr"]} (from .rwconfig)`);
+        }
+        if (options.epilogue_exprs.length === 0 && rwconfig["epilogue-expr"]) {
+            options.epilogue_exprs.push(rwconfig["epilogue-expr"]);
+            if (options.debug) console.log(`epilogue_expr=${rwconfig["epilogue-expr"]} (from .rwconfig)`);
         }
     }
     if (options.sandbox === null) options.sandbox = "webr";
