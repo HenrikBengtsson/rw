@@ -20,7 +20,5 @@ export {
 
     // High-level API
     run,
-    get_webr_version,
-    get_r_version,
     get_r_info
 } from "./rw_session.js";

@@ -1,7 +1,7 @@
 {
     "name": "@henrikbengtsson/rw",
-    "version": "0.0.31",
-    "description": "Run Rscript within WebAssembly (WASM) via node.js",
+    "version": "0.0.101",
+    "description": "Evaluate R Code within WebAssembly (WASM) via Node.js",
     "keywords": [
         "webR",
         "wasm",
@@ -12,13 +12,13 @@
         "emscripten",
         "cli"
     ],
-    "homepage": "https://github.com/HenrikBengtsson/rw",
+    "homepage": "https://github.com/futureverse/rw",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/HenrikBengtsson/rw.git"
+        "url": "git+https://github.com/futureverse/rw.git"
     },
     "bugs": {
-        "url": "https://github.com/HenrikBengtsson/rw/issues"
+        "url": "https://github.com/futureverse/rw/issues"
     },
     "author": {
         "name": "Henrik Bengtsson"

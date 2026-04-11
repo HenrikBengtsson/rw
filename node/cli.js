@@ -1,5 +1,6 @@
 #! /usr/bin/env node
 
+import fs from "fs";
 import {
     version,
     author,
@@ -14,74 +15,81 @@ import {
 
 function show_help() {
     console.log(`
-rw: CLI for webR with Sandboxing Features
+rw: CLI for Sandboxed R Execution
 
 Usage:
 
-  rw [rwasm options] <script.R> [args]
+  rw [options] <script.R> [args]
+  rw [options] --expr="..."
+  rw [options] --persistent install <pkg> [pkg ...]
+  rw config list
+  rw config get <field>
 
-RWasm options:
-
+Options (general):
   --help                        Show this help
   --version                     Show version
-  --webr-version                Show webR version
-  --r-version                   Show R version
   --debug                       Show debug output
-  --vanilla                     Run webR with --vanilla
-  --config                      Show all R configuration settings
-  --config=<field>              Show value of a specific configuration field
+  --vanilla                     Run R with --vanilla
+
+Options (sandboxing):
+  --sandbox=<sandbox>           Sandbox runtime (default: 'webr')
+  --sandbox-opt=<key>=<value>   Sandbox-specific option (repeatable)
+                                  shims=<shim>[,<shim>] — comma-separated shims
+                                  (default: 'install.packages')
   --r-libs=<host-dir>           Bind R user library to host directory
                                 (default: '$RW_R_LIBS_USER')
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
-  --shims=<shims>               Comma-separated set of shims
-                                (default: '$RW_SHIMS'; 'install.packages')
-  --stage=<host-dir>            Bind host directory available to prologue and
-                                epilogue code at '/host/stage', but not
-                                the main code (default: '$RW_STAGE')
+  --bastion=<host-dir>          Bind host directory available to prologue and
+                                epilogue code at '/host/bastion', but not
+                                the main code (default: '$RW_BASTION',
+                                or './bastion/' if it exists)
   --prologue=<R script>         R script evaluated before main R code
   --epilogue=<R script>         R script evaluated after main R code
   --prologue-expr=<R code>      R code evaluated before main R code
   --epilogue-expr=<R code>      R code evaluated after main R code
+  --persistent                  Persist changes to host (required for 'install')
+
+Options (evaluation):
   --expr=<R code>               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
-  --timeout=<seconds>           Maximum evaluation time in seconds, before
-                                signaling an interrupt to R.
+  --timeout=<seconds>           Maximum evaluation time in seconds
 
 Examples:
 
   rw --expr="sum(1:100)"
-
   rw main.R
+  rw --expr="message('running script ...')" main.R
 
-  ## Time out after 3.5 seconds
+  ## Interrupt after 3.5 seconds, if not completed
   rw --timeout=3.5 --expr="slow <- function() { Sys.sleep(5); 42 }" \\
                    --expr="tryCatch(slow(), interrupt = identity)"
 
+  ## Evaluate untrusted R code in sandbox, with data passed in
+  ## and out via a bastion folder accessible only to prologue/epilogue
+  mkdir -p bastion
+  Rscript -e "saveRDS(list(a=1, b=2), 'bastion/in.rds')"
+  rw \\
+    --prologue-expr="data_in <- readRDS('/host/bastion/in.rds')" \\
+    --epilogue-expr="saveRDS(data_out, '/host/bastion/out.rds')" \\
+    --expr="data_out <- lapply(data_in, sqrt)"
+  Rscript -e "data_out <- readRDS('bastion/out.rds')" -e "utils::str(data_out)"
+
+  ## Show all configuration
+  rw config list
+
+  ## Query specific configuration fields
+  rw config get r-version
+  rw config get webr-version
+  rw config get rw_suggestions:RW_R_LIBS_USER
+
   ## An R session with the R user library on host
-  rw --config=rw_suggestions:RW_R_LIBS_USER  ## display default library path
   rw --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 main.R
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw main.R
 
-  ## Install a package (non-persistent)
-  rw --expr="install.packages('praise')" --expr="message(praise::praise())"
+  ## Install a package persistently on host
+  rw --persistent --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 install praise
 
-  ## Install a package (persistently on host)
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr="install.packages('praise')"
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw --expr="message(praise::praise())"
-
-
-  ## Evaluate parts of the R code that is untrusted in R WASM, with
-  ## data passed in and out via a stage folder that trusted prologue
-  ## and epilogue code has access to, but not the main code
-  mkdir -p stage
-  Rscript -e "saveRDS(list(a=1, b=2), 'stage/in.rds')"
-  rw \\
-    --stage=stage \\
-    --prologue-expr="data_in <- readRDS('/host/stage/in.rds')" \\
-    --epilogue-expr="saveRDS(data_out, '/host/stage/out.rds')" \\
-    --expr="data_out <- lapply(data_in, sqrt)"
-  Rscript -e "data_out <- readRDS('stage/out.rds')" -e "utils::str(data_out)"
 
 Version: ${version}
 License: ${license}
@@ -97,10 +105,12 @@ Author: ${author}
 export function parse_args(args) {
     const options = {
         debug: false,
+        sandbox: "webr",
         webr_args: [],
         r_libs_host: null,
         binds: [],
-        stage_host: null,
+        bastion_host: null,
+        persistent: false,
         shims: [],
         prologue_exprs: [],
         exprs: [],
@@ -111,11 +121,14 @@ export function parse_args(args) {
 
     const flags = {
         help: false,
-        version: false,
-        webr_version: false,
-        r_version: false,
-        config: false,
-        config_field: null
+        version: false
+    };
+
+    const command = {
+        type: null,           // null | "config" | "install"
+        config_action: null,  // "list" | "get"
+        config_field: null,
+        install_packages: []
     };
 
     let r_script = null;
@@ -129,15 +142,8 @@ export function parse_args(args) {
             flags.help = true;
         } else if (arg === "--version") {
             flags.version = true;
-        } else if (arg === "--webr-version") {
-            flags.webr_version = true;
-        } else if (arg === "--r-version") {
-            flags.r_version = true;
-        } else if (arg === "--config") {
-            flags.config = true;
-        } else if (arg.startsWith((prefix = "--config="))) {
-            flags.config = true;
-            flags.config_field = arg.slice(prefix.length);
+        } else if (arg === "--persistent") {
+            options.persistent = true;
         } else if (arg === "--debug") {
             options.debug = true;
         } else if (arg === "--vanilla") {
@@ -146,10 +152,25 @@ export function parse_args(args) {
             value = arg.slice(prefix.length);
             if (options.debug) console.log(`expr=${value}`);
             options.exprs.push(value);
-        } else if (arg.startsWith((prefix = "--shims="))) {
+        } else if (arg.startsWith((prefix = "--sandbox="))) {
             value = arg.slice(prefix.length);
-            value = value.split(",");
-            options.shims.push(...value);
+            if (value !== "webr") {
+                throw new Error(`Unknown sandbox: '${value}'. Only 'webr' is supported.`);
+            }
+            options.sandbox = value;
+        } else if (arg.startsWith((prefix = "--sandbox-opt="))) {
+            value = arg.slice(prefix.length);
+            const eq = value.indexOf("=");
+            if (eq === -1) {
+                throw new Error(`Invalid --sandbox-opt format: '${value}'. Expected key=value.`);
+            }
+            const key = value.slice(0, eq);
+            const val = value.slice(eq + 1);
+            if (key === "shims") {
+                options.shims.push(...val.split(","));
+            } else {
+                throw new Error(`Unknown --sandbox-opt key: '${key}'`);
+            }
         } else if (arg.startsWith((prefix = "--prologue-expr="))) {
             value = arg.slice(prefix.length);
             if (options.debug) console.log(`prologue_expr=${value}`);
@@ -169,10 +190,10 @@ export function parse_args(args) {
             normalize_path(parts[0], "host directory");
             options.binds.push({ host: parts[0], webr: parts[1] });
             if (options.debug) console.log(`Add bind=${value}`);
-        } else if (arg.startsWith((prefix = "--stage="))) {
+        } else if (arg.startsWith((prefix = "--bastion="))) {
             value = arg.slice(prefix.length);
-            options.stage_host = normalize_path(value, "host directory");
-            if (options.debug) console.log(`stage_host=${options.stage_host}`);
+            options.bastion_host = normalize_path(value, "host directory");
+            if (options.debug) console.log(`bastion_host=${options.bastion_host}`);
         } else if (arg.startsWith((prefix = "--prologue="))) {
             value = arg.slice(prefix.length);
             r_prologue_script = normalize_path(value, "host file");
@@ -189,9 +210,28 @@ export function parse_args(args) {
             }
             if (options.debug) console.log(`timeout=${options.timeout}`);
         } else {
-            if (options.exprs.length === 0 && r_script === null) {
-                r_script = normalize_path(arg, "host file");
-                if (options.debug) console.log(`r_script=${r_script}`);
+            if (command.type === "install") {
+                // After "install", all non-option args are package names
+                command.install_packages.push(arg);
+            } else if (command.type === null && options.exprs.length === 0 && r_script === null) {
+                if (arg === "config") {
+                    command.type = "config";
+                } else if (arg === "install") {
+                    command.type = "install";
+                } else {
+                    r_script = normalize_path(arg, "host file");
+                    if (options.debug) console.log(`r_script=${r_script}`);
+                }
+            } else if (command.type === "config") {
+                if (arg === "list") {
+                    command.config_action = "list";
+                } else if (arg === "get") {
+                    command.config_action = "get";
+                } else if (command.config_action === "get" && command.config_field === null) {
+                    command.config_field = arg;
+                } else {
+                    throw new Error(`Unexpected argument for 'rw config': ${arg}`);
+                }
             } else {
                 if (options.r_args.length === 0) options.r_args.push("--args");
                 options.r_args.push(arg);
@@ -226,25 +266,36 @@ export function parse_args(args) {
         options.r_libs_host = process.env.RW_R_LIBS_USER || null;
     }
 
-    if (options.stage_host === null) {
-        options.stage_host = process.env.RW_STAGE || null;
+    if (options.bastion_host === null) {
+        options.bastion_host = process.env.RW_BASTION || null;
+    }
+    if (options.bastion_host === null && fs.existsSync("bastion")) {
+        options.bastion_host = normalize_path("bastion", "host directory");
     }
 
     // Apply default shims
     if (options.shims.length === 0) {
         if (options.debug) console.log("Using default R shims ...");
-        const env_shims = process.env.RW_SHIMS;
-        if (env_shims) {
-            if (options.debug) console.log("RW_SHIMS: '" + env_shims + "'");
-            options.shims = env_shims.split(",").filter(str => str !== "");
-        } else {
+        const env_sandbox_opt = process.env.RW_SANDBOX_OPT;
+        if (env_sandbox_opt) {
+            if (options.debug) console.log("RW_SANDBOX_OPT: '" + env_sandbox_opt + "'");
+            const eq = env_sandbox_opt.indexOf("=");
+            if (eq !== -1) {
+                const key = env_sandbox_opt.slice(0, eq);
+                const val = env_sandbox_opt.slice(eq + 1);
+                if (key === "shims") {
+                    options.shims = val.split(",").filter(str => str !== "");
+                }
+            }
+        }
+        if (options.shims.length === 0) {
             options.shims = ["install.packages"];
         }
     } else {
         options.shims = options.shims.filter(str => str !== "");
     }
 
-    return { options, flags };
+    return { options, flags, command };
 }
 
 /**
@@ -261,7 +312,7 @@ async function main() {
         process.exit(1);
     }
 
-    const { options, flags } = parsed;
+    const { options, flags, command } = parsed;
 
     // Handle flags that exit early
     if (flags.help) {
@@ -274,18 +325,55 @@ async function main() {
         process.exit(0);
     }
 
-    if (flags.webr_version) {
-        console.log(await get_webr_version());
+    // Handle subcommands
+    if (command.type === "config") {
+        if (command.config_action === "list") {
+            await get_r_info();
+        } else if (command.config_action === "get") {
+            if (command.config_field === null) {
+                console.error("ERROR: 'rw config get' requires a field name");
+                process.exit(1);
+            }
+            if (command.config_field === "webr-version") {
+                console.log(await get_webr_version());
+            } else if (command.config_field === "r-version") {
+                await get_r_version();
+            } else {
+                await get_r_info(command.config_field);
+            }
+        } else {
+            console.error("ERROR: Unknown config action. Use 'rw config list' or 'rw config get <field>'");
+            process.exit(1);
+        }
         process.exit(0);
     }
 
-    if (flags.r_version) {
-        await get_r_version();
-        process.exit(0);
-    }
+    if (command.type === "install") {
+        if (command.install_packages.length === 0) {
+            console.error("ERROR: 'rw install' requires at least one package name");
+            process.exit(1);
+        }
+        if (!options.persistent) {
+            console.error("ERROR: 'rw install' requires --persistent flag");
+            process.exit(1);
+        }
+        if (!options.r_libs_host) {
+            console.error("ERROR: 'rw install' with --persistent requires --r-libs=<dir> or RW_R_LIBS_USER env var");
+            process.exit(1);
+        }
 
-    if (flags.config) {
-        await get_r_info(flags.config_field);
+        // Build install expressions
+        const install_exprs = command.install_packages.map(
+            pkg => `install.packages(${JSON.stringify(pkg)})`
+        );
+        options.exprs = install_exprs;
+
+        try {
+            await run(options);
+        } catch (e) {
+            console.error("ERROR: " + e.message);
+            process.exit(1);
+        }
         process.exit(0);
     }
 

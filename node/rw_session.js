@@ -1,5 +1,6 @@
 import { WebR } from "webr";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -26,6 +27,12 @@ export const license = package_json.license;
  * @throws {Error} If path does not exist
  */
 export function normalize_path(file, type = "host directory") {
+    // Expand leading ~ to home directory
+    if (file === "~") {
+        file = os.homedir();
+    } else if (file.startsWith("~/")) {
+        file = path.join(os.homedir(), file.slice(2));
+    }
     if (!fs.existsSync(file)) {
         throw new Error(`No such ${type}: ${file}`);
     }
@@ -380,7 +387,7 @@ export class RwSession {
  * @property {string[]} webr_args - Arguments to pass to webR/R
  * @property {string} r_libs_host - Host path for R library
  * @property {Array<{host: string, webr: string}>} binds - Directory bindings
- * @property {string} stage_host - Host path for stage directory
+ * @property {string} bastion_host - Host path for bastion directory
  * @property {string[]} shims - Shims to install
  * @property {string[]} prologue_exprs - R expressions to run before main code
  * @property {string[]} exprs - Main R expressions to run
@@ -399,7 +406,7 @@ export async function run(options = {}) {
         webr_args = [],
         r_libs_host = null,
         binds = [],
-        stage_host = null,
+        bastion_host = null,
         shims = ["install.packages"],
         prologue_exprs = [],
         exprs = [],
@@ -429,20 +436,20 @@ export async function run(options = {}) {
         await session.install_shims(filtered_shims);
     }
 
-    const r_stage_webr = "/host/stage";
+    const r_bastion_webr = "/host/bastion";
 
     // Prologue
     if (prologue_exprs.length > 0) {
         if (debug) console.log("Evaluating prologue R code ...");
 
-        if (stage_host) {
-            await session.mount(stage_host, r_stage_webr);
+        if (bastion_host) {
+            await session.mount(bastion_host, r_bastion_webr);
         }
 
         await session.eval_code(prologue_exprs, { timeout });
 
-        if (stage_host) {
-            await session.unmount(r_stage_webr);
+        if (bastion_host) {
+            await session.unmount(r_bastion_webr);
         }
 
         if (debug) console.log("Evaluating prologue R code ... done");
@@ -459,14 +466,14 @@ export async function run(options = {}) {
     if (epilogue_exprs.length > 0) {
         if (debug) console.log("Evaluating epilogue R code ...");
 
-        if (stage_host) {
-            await session.mount(stage_host, r_stage_webr);
+        if (bastion_host) {
+            await session.mount(bastion_host, r_bastion_webr);
         }
 
         await session.eval_code(epilogue_exprs, { timeout });
 
-        if (stage_host) {
-            await session.unmount(r_stage_webr);
+        if (bastion_host) {
+            await session.unmount(r_bastion_webr);
         }
 
         if (debug) console.log("Evaluating epilogue R code ... done");
