@@ -498,7 +498,7 @@ export async function get_r_version() {
  * Get detailed R configuration info
  * @returns {Promise<void>} Prints configuration to stdout
  */
-export async function get_r_info() {
+export async function get_r_info(field = null) {
     const webR = new WebR({ RArgs: ["--vanilla"] });
     await webR.init();
     const code = [
@@ -549,8 +549,25 @@ export async function get_r_info() {
         'values <- gsub(sprintf("^%s", normalizePath("~")), "~", values)',
         'values <- c(RW_R_LIBS_USER = paste(values, collapse = ":"))',
         'lines <- c(lines, sprintf("rw_suggestions:%s=%s", names(values), values))',
-        'lines <- sort(lines)',
-        'writeLines(lines)'
+        'lines <- sort(lines)'
     ];
+    if (field !== null) {
+        code.push(
+            `field <- ${JSON.stringify(field)}`,
+            'prefix <- paste0(field, "=")',
+            'idx <- which(startsWith(lines, prefix))',
+            'if (length(idx) == 0L) {',
+            '    message(sprintf("Unknown --config field: %s", field))',
+            '    message("Available fields:")',
+            '    fields <- sub("=.*", "", lines)',
+            '    message(paste(sprintf("  %s", fields), collapse = "\\n"))',
+            '} else {',
+            '    values <- substring(lines[idx], nchar(prefix) + 1L)',
+            '    writeLines(values)',
+            '}'
+        );
+    } else {
+        code.push('writeLines(lines)');
+    }
     await webR.evalR(code);
 }

@@ -28,7 +28,8 @@ RWasm options:
   --r-version                   Show R version
   --debug                       Show debug output
   --vanilla                     Run webR with --vanilla
-  --config                      Show R information
+  --config                      Show all R configuration settings
+  --config=<field>              Show value of a specific configuration field
   --r-libs=<host-dir>           Bind R user library to host directory
                                 (default: '$RW_R_LIBS_USER')
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
@@ -58,6 +59,7 @@ Examples:
                    --expr="tryCatch(slow(), interrupt = identity)"
 
   ## An R session with the R user library on host
+  rw --config=rw_suggestions:RW_R_LIBS_USER  ## display default library path
   rw --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 main.R
   RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw main.R
 
@@ -112,7 +114,8 @@ export function parse_args(args) {
         version: false,
         webr_version: false,
         r_version: false,
-        config: false
+        config: false,
+        config_field: null
     };
 
     let r_script = null;
@@ -132,6 +135,9 @@ export function parse_args(args) {
             flags.r_version = true;
         } else if (arg === "--config") {
             flags.config = true;
+        } else if (arg.startsWith((prefix = "--config="))) {
+            flags.config = true;
+            flags.config_field = arg.slice(prefix.length);
         } else if (arg === "--debug") {
             options.debug = true;
         } else if (arg === "--vanilla") {
@@ -279,7 +285,7 @@ async function main() {
     }
 
     if (flags.config) {
-        await get_r_info();
+        await get_r_info(flags.config_field);
         process.exit(0);
     }
 
