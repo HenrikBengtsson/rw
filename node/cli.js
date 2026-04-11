@@ -113,20 +113,21 @@ Options (general):
   --help                        Show this help
   --version                     Show version
   --debug                       Show debug output
+  --no-config                   Ignore ./.rwconfig
   --vanilla                     Run R with --vanilla
 
 Options (sandboxing):
   --sandbox=<sandbox>           Sandbox runtime (default: 'webr')
   --sandbox-opt=<key>=<value>   Sandbox-specific option (repeatable)
                                   shims=<shim>[,<shim>] — comma-separated shims
-                                  (default: 'install.packages')
-  --r-libs=<host-dir>           Bind R user library to host directory
-                                (default: r-libs in ./.rwconfig, then '$RW_R_LIBS_USER')
+                                  (default: 'shims=install.packages')
+  --r-libs-user=<host-dir>      Bind R user library to host directory
+                                (default: r-libs-user in ./.rwconfig)
   --bind=<host-dir>:<rwasm-dir> Bind host directory as a webR directory
                                 (may be specified multiple times)
   --bastion=<host-dir>          Bind host directory available to prologue and
                                 epilogue code at '/host/bastion', but not
-                                the main code (default: '$RW_BASTION',
+                                the main code (default: bastion in ./.rwconfig,
                                 or './bastion/' if it exists)
   --prologue=<R script>         R script evaluated before main R code
   --epilogue=<R script>         R script evaluated after main R code
@@ -149,6 +150,13 @@ Examples:
   rw --timeout=3.5 --expr="slow <- function() { Sys.sleep(5); 42 }" \\
                    --expr="tryCatch(slow(), interrupt = identity)"
 
+  ## Install a package persistently on host
+  rw --persistent --r-libs-user=~/R/wasm32-unknown-emscripten-library/4.5 install praise
+  rw --expr="message(praise::praise())"
+
+  ## An R session with the R user library on host
+  rw --r-libs-user=~/R/wasm32-unknown-emscripten-library/4.5 main.R
+
   ## Evaluate untrusted R code in sandbox, with data passed in
   ## and out via a bastion folder accessible only to prologue/epilogue
   mkdir -p bastion
@@ -163,20 +171,11 @@ Examples:
   rw env list
   rw env get r-version
   rw env get webr-version
-  rw env get rw_suggestions:RW_R_LIBS_USER
 
   ## Show and manage ./.rwconfig settings
   rw config list
-  rw config get r-libs
-  rw config set r-libs ~/R/wasm32-unknown-emscripten-library/4.5
-
-  ## An R session with the R user library on host
-  rw --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 main.R
-  RW_R_LIBS_USER=~/R/wasm32-unknown-emscripten-library/4.5 rw main.R
-
-  ## Install a package persistently on host
-  rw --persistent --r-libs=~/R/wasm32-unknown-emscripten-library/4.5 install praise
-
+  rw config get r-libs-user
+  rw config set r-libs-user ~/R/wasm32-unknown-emscripten-library/4.5
 
 Version: ${version}
 License: ${license}
@@ -192,9 +191,10 @@ Author: ${author}
 export function parse_args(args) {
     const options = {
         debug: false,
+        no_config: false,
         sandbox: null,
         webr_args: [],
-        r_libs_host: null,
+        r_libs_user: null,
         binds: [],
         bastion_host: null,
         persistent: false,
@@ -234,6 +234,8 @@ export function parse_args(args) {
             options.persistent = true;
         } else if (arg === "--debug") {
             options.debug = true;
+        } else if (arg === "--no-config") {
+            options.no_config = true;
         } else if (arg === "--vanilla") {
             options.webr_args.push(arg);
         } else if (arg.startsWith((prefix = "--expr="))) {
@@ -264,10 +266,10 @@ export function parse_args(args) {
             value = arg.slice(prefix.length);
             if (options.debug) console.log(`epilogue_expr=${value}`);
             options.epilogue_exprs.push(value);
-        } else if (arg.startsWith((prefix = "--r-libs="))) {
+        } else if (arg.startsWith((prefix = "--r-libs-user="))) {
             value = arg.slice(prefix.length);
-            options.r_libs_host = normalize_path(value, "host directory");
-            if (options.debug) console.log(`r_libs_host=${options.r_libs_host}`);
+            options.r_libs_user = normalize_path(value, "host directory");
+            if (options.debug) console.log(`r_libs_user=${options.r_libs_user}`);
         } else if (arg.startsWith((prefix = "--bind="))) {
             value = arg.slice(prefix.length);
             const parts = value.split(":");
@@ -369,29 +371,24 @@ export function parse_args(args) {
     }
 
     // Apply ./.rwconfig defaults (lower precedence than CLI flags, higher than env vars)
-    const rwconfig = load_rwconfig();
-    if (options.sandbox === null && rwconfig["sandbox"]) {
-        options.sandbox = rwconfig["sandbox"];
-        if (options.debug) console.log(`sandbox=${options.sandbox} (from .rwconfig)`);
+    if (!options.no_config) {
+        const rwconfig = load_rwconfig();
+        if (options.sandbox === null && rwconfig["sandbox"]) {
+            options.sandbox = rwconfig["sandbox"];
+            if (options.debug) console.log(`sandbox=${options.sandbox} (from .rwconfig)`);
+        }
+        if (options.r_libs_user === null && rwconfig["r-libs-user"]) {
+            options.r_libs_user = normalize_path(rwconfig["r-libs-user"], "host directory");
+            if (options.debug) console.log(`r_libs_user=${options.r_libs_user} (from .rwconfig)`);
+        }
+        if (options.bastion_host === null && rwconfig["bastion"]) {
+            options.bastion_host = normalize_path(rwconfig["bastion"], "host directory");
+            if (options.debug) console.log(`bastion_host=${options.bastion_host} (from .rwconfig)`);
+        }
     }
     if (options.sandbox === null) options.sandbox = "webr";
-    if (options.r_libs_host === null && rwconfig["r-libs"]) {
-        options.r_libs_host = normalize_path(rwconfig["r-libs"], "host directory");
-        if (options.debug) console.log(`r_libs_host=${options.r_libs_host} (from .rwconfig)`);
-    }
-    if (options.bastion_host === null && rwconfig["bastion"]) {
-        options.bastion_host = normalize_path(rwconfig["bastion"], "host directory");
-        if (options.debug) console.log(`bastion_host=${options.bastion_host} (from .rwconfig)`);
-    }
 
     // Apply environment variables
-    if (options.r_libs_host === null) {
-        options.r_libs_host = process.env.RW_R_LIBS_USER || null;
-    }
-
-    if (options.bastion_host === null) {
-        options.bastion_host = process.env.RW_BASTION || null;
-    }
     if (options.bastion_host === null && fs.existsSync("bastion")) {
         options.bastion_host = normalize_path("bastion", "host directory");
     }
@@ -532,8 +529,8 @@ async function main() {
             console.error("ERROR: 'rw install' requires --persistent flag");
             process.exit(1);
         }
-        if (!options.r_libs_host) {
-            console.error("ERROR: 'rw install' with --persistent requires --r-libs=<dir> or RW_R_LIBS_USER env var");
+        if (!options.r_libs_user) {
+            console.error("ERROR: 'rw install' with --persistent requires --r-libs-user=<dir> or r-libs-user in .rwconfig");
             process.exit(1);
         }
 

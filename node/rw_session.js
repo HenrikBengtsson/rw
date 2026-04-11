@@ -385,7 +385,7 @@ export class RwSession {
  * @typedef {Object} RunOptions
  * @property {boolean} debug - Enable debug output
  * @property {string[]} webr_args - Arguments to pass to webR/R
- * @property {string} r_libs_host - Host path for R library
+ * @property {string} r_libs_user - Host path for R library
  * @property {Array<{host: string, webr: string}>} binds - Directory bindings
  * @property {string} bastion_host - Host path for bastion directory
  * @property {string[]} shims - Shims to install
@@ -404,7 +404,7 @@ export async function run(options = {}) {
     const {
         debug = false,
         webr_args = [],
-        r_libs_host = null,
+        r_libs_user = null,
         binds = [],
         bastion_host = null,
         shims = ["install.packages"],
@@ -418,8 +418,8 @@ export async function run(options = {}) {
     await session.init({ r_args: webr_args });
 
     // Mount R library if specified
-    if (r_libs_host) {
-        const normalized_libs = normalize_path(r_libs_host);
+    if (r_libs_user) {
+        const normalized_libs = normalize_path(r_libs_user);
         const r_libs_webr = "/host/R_LIBS_USER";
         await session.mount(normalized_libs, r_libs_webr);
         await session.set_lib_paths(r_libs_webr);
