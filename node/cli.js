@@ -671,11 +671,11 @@ async function main() {
         const docker_args = [
             "run", "--rm",
             "-u", `${uid}:${gid}`,
-            "-v", `${pkg_path}:/src`,
-            "-v", `${out_path}:/out`,
-            "-w", "/src",
+            "-v", `${pkg_path}:/host/pkg`,
+            "-v", `${out_path}:/host/pwd`,
+            "-w", "/host/pkg",
             "ghcr.io/r-wasm/webr:main",
-            "Rscript", "-e", "rwasm::build('.', out_dir = '/out')"
+            "Rscript", "-e", "rwasm::build('.', out_dir = '/host/pwd')"
         ];
         if (options.debug) console.log("docker " + docker_args.join(" "));
 
