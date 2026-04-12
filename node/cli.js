@@ -1,6 +1,9 @@
 #! /usr/bin/env node
 
 import fs from "fs";
+import os from "os";
+import path from "path";
+import { spawn } from "child_process";
 import {
     version,
     author,
@@ -14,16 +17,18 @@ import {
 } from "./rw_session.js";
 
 const RWCONFIG_PATH = "./.rwconfig";
+const USER_RWCONFIG_PATH = path.join(os.homedir(), ".rwconfig");
 
 /**
- * Load ./.rwconfig key=value pairs. Lines starting with '#' and blank lines
+ * Load a rwconfig file (key=value). Lines starting with '#' and blank lines
  * are ignored. Returns an empty object if the file does not exist.
+ * @param {string} file_path
  * @returns {Object} Parsed config fields
  */
-function load_rwconfig() {
-    if (!fs.existsSync(RWCONFIG_PATH)) return {};
+function load_rwconfig(file_path) {
+    if (!fs.existsSync(file_path)) return {};
     const config = {};
-    for (const line of fs.readFileSync(RWCONFIG_PATH, "utf8").split("\n")) {
+    for (const line of fs.readFileSync(file_path, "utf8").split("\n")) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith("#")) continue;
         const eq = trimmed.indexOf("=");
@@ -34,13 +39,29 @@ function load_rwconfig() {
 }
 
 /**
- * Write (or update) a single field in ./.rwconfig.
+ * Load and merge ~/.rwconfig (user) and ./.rwconfig (project), with project
+ * taking precedence. Returns merged config and per-key provenance labels.
+ * @returns {{ config: Object, provenance: Object }}
+ */
+function load_all_rwconfigs() {
+    const user    = load_rwconfig(USER_RWCONFIG_PATH);
+    const project = load_rwconfig(RWCONFIG_PATH);
+    const config = {};
+    const provenance = {};
+    for (const [k, v] of Object.entries(user))    { config[k] = v; provenance[k] = "~/.rwconfig"; }
+    for (const [k, v] of Object.entries(project)) { config[k] = v; provenance[k] = "./.rwconfig"; }
+    return { config, provenance };
+}
+
+/**
+ * Write (or update) a single field in a rwconfig file.
  * @param {string} field
  * @param {string} value
+ * @param {string} file_path
  */
-function write_rwconfig(field, value) {
-    let content = fs.existsSync(RWCONFIG_PATH)
-        ? fs.readFileSync(RWCONFIG_PATH, "utf8")
+function write_rwconfig(field, value, file_path = RWCONFIG_PATH) {
+    let content = fs.existsSync(file_path)
+        ? fs.readFileSync(file_path, "utf8")
         : "";
     const lines = content.split("\n");
     let found = false;
@@ -54,21 +75,22 @@ function write_rwconfig(field, value) {
         return line;
     });
     if (found) {
-        fs.writeFileSync(RWCONFIG_PATH, updated.join("\n"), "utf8");
+        fs.writeFileSync(file_path, updated.join("\n"), "utf8");
     } else {
         if (content && !content.endsWith("\n")) content += "\n";
-        fs.writeFileSync(RWCONFIG_PATH, content + `${field}=${value}\n`, "utf8");
+        fs.writeFileSync(file_path, content + `${field}=${value}\n`, "utf8");
     }
 }
 
 /**
- * Remove a field from ./.rwconfig. Returns true if the field was found.
+ * Remove a field from a rwconfig file. Returns true if the field was found.
  * @param {string} field
+ * @param {string} file_path
  * @returns {boolean}
  */
-function unset_rwconfig(field) {
-    if (!fs.existsSync(RWCONFIG_PATH)) return false;
-    const lines = fs.readFileSync(RWCONFIG_PATH, "utf8").split("\n");
+function unset_rwconfig(field, file_path = RWCONFIG_PATH) {
+    if (!fs.existsSync(file_path)) return false;
+    const lines = fs.readFileSync(file_path, "utf8").split("\n");
     let found = false;
     const updated = lines.filter(line => {
         const trimmed = line.trim();
@@ -79,7 +101,7 @@ function unset_rwconfig(field) {
         }
         return true;
     });
-    if (found) fs.writeFileSync(RWCONFIG_PATH, updated.join("\n"), "utf8");
+    if (found) fs.writeFileSync(file_path, updated.join("\n"), "utf8");
     return found;
 }
 
@@ -102,12 +124,17 @@ Usage:
   rw [options] <script.R> [args]
   rw [options] --expr="..."
   rw [options] --persistent install <pkg> [pkg ...]
+  rw build --docker [<dir>]
   rw env list
   rw env get <field>
-  rw config list
-  rw config get <field>
-  rw config set <field> <value>
-  rw config unset <field>
+  rw config [--local] list
+  rw config [--local] get <field>
+  rw config [--local] set <field> <value>
+  rw config [--local] unset <field>
+  rw config --global list
+  rw config --global get <field>
+  rw config --global set <field> <value>
+  rw config --global unset <field>
 
 Options (general):
   --help                        Show this help
@@ -181,6 +208,10 @@ Examples:
   rw config get r-libs-user
   rw config set r-libs-user ~/R/wasm32-unknown-emscripten-library/4.5
 
+  ## Build a webR binary of an R package via Docker
+  rw build --docker .
+  rw build --docker path/to/mypkg
+
 Version: ${version}
 License: ${license}
 Author: ${author}
@@ -216,11 +247,14 @@ export function parse_args(args) {
     };
 
     const command = {
-        type: null,    // null | "env" | "config" | "install"
-        action: null,  // "list" | "get" | "set"
+        type: null,      // null | "env" | "config" | "install"
+        action: null,    // "list" | "get" | "set" | "unset"
+        scope: null,     // null (unset) | "local" (./.rwconfig) | "global" (~/.rwconfig)
         field: null,
         value: null,
-        install_packages: []
+        install_packages: [],
+        build_path: null,
+        build_docker: false
     };
 
     let r_script = null;
@@ -272,7 +306,7 @@ export function parse_args(args) {
             options.epilogue_exprs.push(value);
         } else if (arg.startsWith((prefix = "--r-libs-user="))) {
             value = arg.slice(prefix.length);
-            options.r_libs_user = normalize_path(value, "host directory");
+            options.r_libs_user = value;
             if (options.debug) console.log(`r_libs_user=${options.r_libs_user}`);
         } else if (arg.startsWith((prefix = "--bind="))) {
             value = arg.slice(prefix.length);
@@ -283,15 +317,15 @@ export function parse_args(args) {
             if (options.debug) console.log(`Add bind=${value}`);
         } else if (arg.startsWith((prefix = "--bastion="))) {
             value = arg.slice(prefix.length);
-            options.bastion_host = normalize_path(value, "host directory");
+            options.bastion_host = value;
             if (options.debug) console.log(`bastion_host=${options.bastion_host}`);
         } else if (arg.startsWith((prefix = "--prologue="))) {
             value = arg.slice(prefix.length);
-            r_prologue_script = normalize_path(value, "host file");
+            r_prologue_script = value;
             if (options.debug) console.log(`r_prologue_script=${r_prologue_script}`);
         } else if (arg.startsWith((prefix = "--epilogue="))) {
             value = arg.slice(prefix.length);
-            r_epilogue_script = normalize_path(value, "host file");
+            r_epilogue_script = value;
             if (options.debug) console.log(`r_epilogue_script=${r_epilogue_script}`);
         } else if (arg.startsWith((prefix = "--timeout="))) {
             value = arg.slice(prefix.length);
@@ -311,8 +345,10 @@ export function parse_args(args) {
                     command.type = "config";
                 } else if (arg === "install") {
                     command.type = "install";
+                } else if (arg === "build") {
+                    command.type = "build";
                 } else {
-                    r_script = normalize_path(arg, "host file");
+                    r_script = arg;
                     if (options.debug) console.log(`r_script=${r_script}`);
                 }
             } else if (command.type === "env") {
@@ -326,7 +362,11 @@ export function parse_args(args) {
                     throw new Error(`Unexpected argument for 'rw env': ${arg}`);
                 }
             } else if (command.type === "config") {
-                if (arg === "list") {
+                if (arg === "--local") {
+                    command.scope = "local";
+                } else if (arg === "--global") {
+                    command.scope = "global";
+                } else if (arg === "list") {
                     command.action = "list";
                 } else if (arg === "get") {
                     command.action = "get";
@@ -345,6 +385,14 @@ export function parse_args(args) {
                 } else {
                     throw new Error(`Unexpected argument for 'rw config': ${arg}`);
                 }
+            } else if (command.type === "build") {
+                if (arg === "--docker") {
+                    command.build_docker = true;
+                } else if (command.build_path === null) {
+                    command.build_path = arg;
+                } else {
+                    throw new Error(`Unexpected argument for 'rw build': ${arg}`);
+                }
             } else {
                 if (options.r_args.length === 0) options.r_args.push("--args");
                 options.r_args.push(arg);
@@ -354,6 +402,52 @@ export function parse_args(args) {
 
     // Add r_args to webr_args
     options.webr_args.push(...options.r_args);
+
+    // Apply rwconfig defaults (raw values; lower precedence than CLI flags)
+    const rwconfig = options.no_config ? {} : load_all_rwconfigs().config;
+    if (!options.no_config) {
+        if (options.sandbox === null && rwconfig["sandbox"]) {
+            options.sandbox = rwconfig["sandbox"];
+            if (options.debug) console.log(`sandbox=${options.sandbox} (from .rwconfig)`);
+        }
+        if (options.r_libs_user === null && rwconfig["r-libs-user"]) {
+            options.r_libs_user = rwconfig["r-libs-user"];
+            if (options.debug) console.log(`r_libs_user=${options.r_libs_user} (from .rwconfig)`);
+        }
+        if (options.bastion_host === null && rwconfig["bastion"]) {
+            options.bastion_host = rwconfig["bastion"];
+            if (options.debug) console.log(`bastion_host=${options.bastion_host} (from .rwconfig)`);
+        }
+        if (options.prologue_exprs.length === 0 && r_prologue_script === null && rwconfig["prologue-expr"]) {
+            options.prologue_exprs.push(rwconfig["prologue-expr"]);
+            if (options.debug) console.log(`prologue_expr=${rwconfig["prologue-expr"]} (from .rwconfig)`);
+        }
+        if (options.epilogue_exprs.length === 0 && r_epilogue_script === null && rwconfig["epilogue-expr"]) {
+            options.epilogue_exprs.push(rwconfig["epilogue-expr"]);
+            if (options.debug) console.log(`epilogue_expr=${rwconfig["epilogue-expr"]} (from .rwconfig)`);
+        }
+    }
+    if (options.sandbox === null) options.sandbox = "webr";
+
+    // r-libs-user is only honoured when --persistent is set
+    if (!options.persistent) {
+        if (options.r_libs_user !== null && options.debug) {
+            console.log("Ignoring r-libs-user (requires --persistent)");
+        }
+        options.r_libs_user = null;
+    }
+
+    // Bastion fallback
+    if (options.bastion_host === null && fs.existsSync("bastion")) {
+        options.bastion_host = "bastion";
+    }
+
+    // Normalize all paths now that all sources have been considered
+    if (r_script !== null) r_script = normalize_path(r_script, "host file");
+    if (r_prologue_script !== null) r_prologue_script = normalize_path(r_prologue_script, "host file");
+    if (r_epilogue_script !== null) r_epilogue_script = normalize_path(r_epilogue_script, "host file");
+    if (options.r_libs_user !== null) options.r_libs_user = normalize_path(options.r_libs_user, "host directory");
+    if (options.bastion_host !== null) options.bastion_host = normalize_path(options.bastion_host, "host directory");
 
     // Process scripts
     if (options.exprs.length > 0 && r_script !== null) {
@@ -372,45 +466,6 @@ export function parse_args(args) {
         throw new Error("R epilogue script must not be specified when R epilogue expressions are specified");
     } else if (r_epilogue_script !== null) {
         options.epilogue_exprs = read_code(r_epilogue_script, "epilogue", options.debug);
-    }
-
-    // Apply ./.rwconfig defaults (lower precedence than CLI flags, higher than env vars)
-    const rwconfig = options.no_config ? {} : load_rwconfig();
-    if (!options.no_config) {
-        if (options.sandbox === null && rwconfig["sandbox"]) {
-            options.sandbox = rwconfig["sandbox"];
-            if (options.debug) console.log(`sandbox=${options.sandbox} (from .rwconfig)`);
-        }
-        if (options.r_libs_user === null && rwconfig["r-libs-user"]) {
-            options.r_libs_user = normalize_path(rwconfig["r-libs-user"], "host directory");
-            if (options.debug) console.log(`r_libs_user=${options.r_libs_user} (from .rwconfig)`);
-        }
-        if (options.bastion_host === null && rwconfig["bastion"]) {
-            options.bastion_host = normalize_path(rwconfig["bastion"], "host directory");
-            if (options.debug) console.log(`bastion_host=${options.bastion_host} (from .rwconfig)`);
-        }
-        if (options.prologue_exprs.length === 0 && rwconfig["prologue-expr"]) {
-            options.prologue_exprs.push(rwconfig["prologue-expr"]);
-            if (options.debug) console.log(`prologue_expr=${rwconfig["prologue-expr"]} (from .rwconfig)`);
-        }
-        if (options.epilogue_exprs.length === 0 && rwconfig["epilogue-expr"]) {
-            options.epilogue_exprs.push(rwconfig["epilogue-expr"]);
-            if (options.debug) console.log(`epilogue_expr=${rwconfig["epilogue-expr"]} (from .rwconfig)`);
-        }
-    }
-    if (options.sandbox === null) options.sandbox = "webr";
-
-    // r-libs-user is only honoured when --persistent is set
-    if (!options.persistent) {
-        if (options.r_libs_user !== null && options.debug) {
-            console.log("Ignoring r-libs-user (requires --persistent)");
-        }
-        options.r_libs_user = null;
-    }
-
-    // Apply environment variables
-    if (options.bastion_host === null && fs.existsSync("bastion")) {
-        options.bastion_host = normalize_path("bastion", "host directory");
     }
 
     // Apply default shims (from .rwconfig, then built-in default)
@@ -487,24 +542,46 @@ async function main() {
     }
 
     if (command.type === "config") {
+        // scope: null = unset; "local" = ./.rwconfig; "global" = ~/.rwconfig
+        // set/unset default to local; list/get default to merged (both files)
+        const is_global  = command.scope === "global";
+        const is_local   = command.scope === "local";
+        const scoped_path  = is_global ? USER_RWCONFIG_PATH : RWCONFIG_PATH;
+        const scope_label  = is_global ? "~/.rwconfig" : "./.rwconfig";
+
         if (command.action === "list") {
-            const rwconfig = load_rwconfig();
-            const entries = Object.entries(rwconfig);
-            if (entries.length === 0) {
-                console.log("(no settings in .rwconfig)");
+            let entries, provenance;
+            if (command.scope !== null) {
+                // Explicit --local or --global: show only that file
+                const config = load_rwconfig(scoped_path);
+                entries = Object.entries(config);
+                provenance = Object.fromEntries(entries.map(([k]) => [k, scope_label]));
             } else {
-                for (const [k, v] of entries) console.log(`${k}=${v}`);
+                // No scope flag: show merged view with provenance
+                const r = load_all_rwconfigs();
+                entries = Object.entries(r.config);
+                provenance = r.provenance;
+            }
+            if (entries.length === 0) {
+                const where = command.scope !== null ? scope_label : "~/.rwconfig or ./.rwconfig";
+                console.log(`(no settings in ${where})`);
+            } else {
+                for (const [k, v] of entries) console.log(`${k}=${v}  # ${provenance[k]}`);
             }
         } else if (command.action === "get") {
             if (command.field === null) {
                 console.error("ERROR: 'rw config get' requires a field name");
                 process.exit(1);
             }
-            const rwconfig = load_rwconfig();
-            if (Object.prototype.hasOwnProperty.call(rwconfig, command.field)) {
-                console.log(rwconfig[command.field]);
+            // Explicit scope: read only that file; no scope: read merged (effective value)
+            const config = command.scope !== null
+                ? load_rwconfig(scoped_path)
+                : load_all_rwconfigs().config;
+            const where = command.scope !== null ? scope_label : "~/.rwconfig or ./.rwconfig";
+            if (Object.prototype.hasOwnProperty.call(config, command.field)) {
+                console.log(config[command.field]);
             } else {
-                console.error(`ERROR: '${command.field}' is not set in .rwconfig`);
+                console.error(`ERROR: '${command.field}' is not set in ${where}`);
                 process.exit(1);
             }
         } else if (command.action === "set") {
@@ -512,15 +589,17 @@ async function main() {
                 console.error("ERROR: 'rw config set' requires a field name and a value");
                 process.exit(1);
             }
-            write_rwconfig(command.field, command.value);
+            // Default scope for set is local
+            write_rwconfig(command.field, command.value, scoped_path);
             console.log(`${command.field}=${command.value}`);
         } else if (command.action === "unset") {
             if (!command.field) {
                 console.error("ERROR: 'rw config unset' requires a field name");
                 process.exit(1);
             }
-            if (!unset_rwconfig(command.field)) {
-                console.error(`ERROR: '${command.field}' is not set in .rwconfig`);
+            // Default scope for unset is local
+            if (!unset_rwconfig(command.field, scoped_path)) {
+                console.error(`ERROR: '${command.field}' is not set in ${scope_label}`);
                 process.exit(1);
             }
         } else {
@@ -528,6 +607,34 @@ async function main() {
             process.exit(1);
         }
         process.exit(0);
+    }
+
+    if (command.type === "build") {
+        if (!command.build_docker) {
+            console.error("ERROR: 'rw build' requires --docker (host-native build not yet supported)");
+            process.exit(1);
+        }
+        const pkg_path = normalize_path(command.build_path ?? ".", "package directory");
+        const out_path = process.cwd();
+        const uid = process.getuid();
+        const gid = process.getgid();
+        const docker_args = [
+            "run", "--rm",
+            "-u", `${uid}:${gid}`,
+            "-v", `${pkg_path}:/src`,
+            "-v", `${out_path}:/out`,
+            "-w", "/src",
+            "ghcr.io/r-wasm/webr:main",
+            "Rscript", "-e", "rwasm::build('.', out_dir = '/out')"
+        ];
+        if (options.debug) console.log("docker " + docker_args.join(" "));
+        const proc = spawn("docker", docker_args, { stdio: "inherit" });
+        proc.on("error", e => {
+            console.error("ERROR: " + e.message);
+            process.exit(1);
+        });
+        proc.on("close", code => process.exit(code ?? 0));
+        return;
     }
 
     // Validate sandbox before any operation that uses it
