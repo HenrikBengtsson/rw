@@ -141,6 +141,7 @@ Usage:
 
   rw [options] <script.R> [args]
   rw [options] --expr="..."
+  rw [options] < script.R
   rw [options] --persistent install <pkg> [pkg ...]
   rw [options] --persistent install --docker <dir> [dir ...]
   rw [options] --persistent uninstall <pkg> [pkg ...]
@@ -195,7 +196,10 @@ Options (evaluation):
 Examples:
 
   rw --expr="sum(1:100)"
+  rw <<< "1 + 2"
+  echo "sum(1:100)" | rw
   rw main.R
+  rw < main.R
   rw --expr="message('running script ...')" main.R
 
   ## Interrupt after 3.5 seconds, if not completed
@@ -812,6 +816,16 @@ async function main() {
             process.exit(1);
         }
         process.exit(0);
+    }
+
+    // Read R code from stdin if piped/redirected and no code was given
+    if (options.exprs.length === 0 && !process.stdin.isTTY) {
+        const stdin_code = fs.readFileSync(0, "utf8");
+        options.exprs = stdin_code.split(/\r?\n/).filter(str => str !== "");
+        if (options.debug) {
+            console.log("R main code from stdin to be parsed and evaluated:");
+            console.log(options.exprs);
+        }
     }
 
     // Show help if no code to run
