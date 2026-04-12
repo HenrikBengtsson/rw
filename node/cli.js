@@ -158,6 +158,7 @@ Usage:
 Options (general):
   --help                        Show this help
   --version                     Show version
+  --verbose                     Show progress messages
   --debug                       Show debug output
   --no-config                   Ignore ./.rwconfig
   --vanilla                     Run R with --vanilla
@@ -245,6 +246,7 @@ Author: ${author}
 export function parse_args(args) {
     const options = {
         debug: false,
+        verbose: false,
         no_config: false,
         sandbox: null,
         webr_args: [],
@@ -292,6 +294,8 @@ export function parse_args(args) {
             options.persistent = true;
         } else if (arg === "--debug") {
             options.debug = true;
+        } else if (arg === "--verbose") {
+            options.verbose = true;
         } else if (arg === "--no-config") {
             options.no_config = true;
         } else if (arg === "--vanilla") {
@@ -451,6 +455,17 @@ export function parse_args(args) {
         }
     }
     if (options.sandbox === null) options.sandbox = "webr";
+
+    // Verbose: report which config files are in use
+    if (options.verbose && !options.no_config) {
+        if (fs.existsSync(USER_RWCONFIG_PATH)) {
+            console.error(`Using ${USER_RWCONFIG_PATH}`);
+        }
+        if (fs.existsSync(RWCONFIG_PATH) && path.resolve(RWCONFIG_PATH) !== path.resolve(USER_RWCONFIG_PATH)) {
+            const rel = path.relative(process.cwd(), RWCONFIG_PATH);
+            console.error(`Using ${rel}`);
+        }
+    }
 
     // r-libs-user is only honoured when --persistent is set
     if (!options.persistent) {
@@ -640,6 +655,7 @@ async function main() {
         }
         const pkg_path = normalize_path(command.build_path ?? ".", "package directory");
         const out_path = process.cwd();
+        if (options.verbose) console.error(`Building package from '${pkg_path}' using Docker`);
         const uid = process.getuid();
         const gid = process.getgid();
         const docker_args = [
@@ -704,6 +720,7 @@ async function main() {
 
             for (const pkg_dir of command.install_packages) {
                 const pkg_path = normalize_path(pkg_dir, "package directory");
+                if (options.verbose) console.error(`Building package from '${pkg_path}' using Docker`);
                 const docker_args = [
                     "run", "--rm",
                     "-u", `${uid}:${gid}`,
@@ -727,6 +744,9 @@ async function main() {
                 }).catch(e => { console.error("ERROR: " + e.message); process.exit(1); });
                 const built = fs.readdirSync(out_path)
                     .filter(f => f.endsWith(".tgz") && !tgz_before.has(f));
+                if (options.verbose) {
+                    for (const f of built) console.error(`Built tarball '${path.join(out_path, f)}'`);
+                }
                 tarballs.push(...built);
             }
 
@@ -738,6 +758,11 @@ async function main() {
         }
 
         // Build install expressions
+        if (options.verbose) {
+            for (const pkg of command.install_packages) {
+                console.error(`Installing package '${pkg}'`);
+            }
+        }
         const install_exprs = command.install_packages.map(
             pkg => `install.packages(${JSON.stringify(pkg)})`
         );

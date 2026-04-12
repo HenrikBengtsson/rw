@@ -417,6 +417,7 @@ export class RwSession {
 export async function run(options = {}) {
     const {
         debug = false,
+        verbose = false,
         webr_args = [],
         r_libs_user = null,
         binds = [],
@@ -435,6 +436,7 @@ export async function run(options = {}) {
     if (r_libs_user) {
         const normalized_libs = normalize_path(r_libs_user);
         const r_libs_webr = "/host/R_LIBS_USER";
+        if (verbose) console.error(`Binding host R library '${normalized_libs}' to '${r_libs_webr}' in R`);
         await session.mount(normalized_libs, r_libs_webr);
         await session.set_lib_paths(r_libs_webr);
     }
@@ -447,6 +449,7 @@ export async function run(options = {}) {
             const r_wd = await session.webR.evalRString("getwd()");
             webr_path = path.posix.join(r_wd, webr_path);
         }
+        if (verbose) console.error(`Binding host folder '${bind.host}' to '${webr_path}' in R`);
         await session.mount(bind.host, webr_path);
     }
 
@@ -458,9 +461,12 @@ export async function run(options = {}) {
 
     const r_bastion_webr = "/host/bastion";
 
+    if (bastion_host && verbose) console.error(`Binding bastion folder '${bastion_host}' to '${r_bastion_webr}' in R`);
+
     // Prologue
     if (prologue_exprs.length > 0) {
         if (debug) console.log("Evaluating prologue R code ...");
+        if (verbose) console.error("Evaluating prologue R code");
 
         if (bastion_host) {
             await session.mount(bastion_host, r_bastion_webr);
@@ -478,6 +484,7 @@ export async function run(options = {}) {
     // Main
     if (exprs.length > 0) {
         if (debug) console.log("Evaluate main R code ...");
+        if (verbose) console.error("Evaluating R code");
         await session.eval_code(exprs, { timeout });
         if (debug) console.log("Evaluate main R code ... done");
     }
@@ -485,6 +492,7 @@ export async function run(options = {}) {
     // Epilogue
     if (epilogue_exprs.length > 0) {
         if (debug) console.log("Evaluating epilogue R code ...");
+        if (verbose) console.error("Evaluating epilogue R code");
 
         if (bastion_host) {
             await session.mount(bastion_host, r_bastion_webr);
