@@ -312,7 +312,6 @@ export function parse_args(args) {
             value = arg.slice(prefix.length);
             const parts = value.split(":");
             if (parts.length === 1) parts.push(parts[0]);
-            normalize_path(parts[0], "host directory");
             options.binds.push({ host: parts[0], webr: parts[1] });
             if (options.debug) console.log(`Add bind=${value}`);
         } else if (arg.startsWith((prefix = "--bastion="))) {
@@ -448,6 +447,7 @@ export function parse_args(args) {
     if (r_epilogue_script !== null) r_epilogue_script = normalize_path(r_epilogue_script, "host file");
     if (options.r_libs_user !== null) options.r_libs_user = normalize_path(options.r_libs_user, "host directory");
     if (options.bastion_host !== null) options.bastion_host = normalize_path(options.bastion_host, "host directory");
+    for (const bind of options.binds) bind.host = normalize_path(bind.host, "host directory");
 
     // Process scripts
     if (options.exprs.length > 0 && r_script !== null) {

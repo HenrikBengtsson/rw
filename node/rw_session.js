@@ -117,6 +117,11 @@ attach(list(install.packages = local({
         next
       }
 
+      if (grepl("[.]tar[.]gz$|[.]tgz$", pkg)) {
+        utils::untar(pkg, exdir = lib, tar = "internal", extras = "--no-same-permissions")
+        next
+      }
+
       if (!pkg %in% rownames(info)) {
         warning(paste("Requested package", pkg, "not found in webR binary repo."))
         next
@@ -162,8 +167,17 @@ attach(list(install.packages = local({
  */
 export function get_webr_install_shim() {
     return `
-attach(list(install.packages = function(..., mount = FALSE) {
-    webr::install(..., mount = mount)
+attach(list(install.packages = function(pkgs, ..., mount = FALSE) {
+    is_local <- is.character(pkgs) & grepl("[.]tar[.]gz$|[.]tgz$", pkgs)
+    if (any(is_local)) {
+        lib <- .libPaths()[1]
+        for (pkg in pkgs[is_local]) {
+            utils::untar(pkg, exdir = lib, tar = "internal", extras = "--no-same-permissions")
+        }
+        if (!all(is_local)) webr::install(pkgs[!is_local], ..., mount = mount)
+    } else {
+        webr::install(pkgs, ..., mount = mount)
+    }
 }), name = "rw_shims", warn.conflicts = FALSE)
 `;
 }
@@ -427,7 +441,13 @@ export async function run(options = {}) {
 
     // Bind host directories
     for (const bind of binds) {
-        await session.mount(bind.host, bind.webr);
+        let webr_path = bind.webr;
+        if (!webr_path.startsWith("/")) {
+            // Resolve relative webR paths (including ".") against R's working directory
+            const r_wd = await session.webR.evalRString("getwd()");
+            webr_path = path.posix.join(r_wd, webr_path);
+        }
+        await session.mount(bind.host, webr_path);
     }
 
     // Install shims
