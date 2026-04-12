@@ -16,8 +16,26 @@ import {
     get_r_info
 } from "./rw_session.js";
 
-const RWCONFIG_PATH = "./.rwconfig";
 const USER_RWCONFIG_PATH = path.join(os.homedir(), ".rwconfig");
+
+/**
+ * Walk up from CWD looking for .rwconfig. Returns the path if found,
+ * otherwise falls back to ./.rwconfig (for write operations that create it).
+ * @returns {string}
+ */
+function find_project_rwconfig() {
+    let dir = process.cwd();
+    while (true) {
+        const candidate = path.join(dir, ".rwconfig");
+        if (fs.existsSync(candidate)) return candidate;
+        const parent = path.dirname(dir);
+        if (parent === dir) break; // filesystem root
+        dir = parent;
+    }
+    return path.join(process.cwd(), ".rwconfig");
+}
+
+const RWCONFIG_PATH = find_project_rwconfig();
 
 /**
  * Load a rwconfig file (key=value). Lines starting with '#' and blank lines
