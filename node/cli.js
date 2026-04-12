@@ -124,6 +124,7 @@ Usage:
   rw [options] <script.R> [args]
   rw [options] --expr="..."
   rw [options] --persistent install <pkg> [pkg ...]
+  rw [options] --persistent install --docker <dir> [dir ...]
   rw build --docker [<dir>]
   rw env list
   rw env get <field>
@@ -253,6 +254,7 @@ export function parse_args(args) {
         field: null,
         value: null,
         install_packages: [],
+        install_docker: false,
         build_path: null,
         build_docker: false
     };
@@ -335,8 +337,12 @@ export function parse_args(args) {
             if (options.debug) console.log(`timeout=${options.timeout}`);
         } else {
             if (command.type === "install") {
-                // After "install", all non-option args are package names
-                command.install_packages.push(arg);
+                if (arg === "--docker") {
+                    command.install_docker = true;
+                } else {
+                    // package name or local path
+                    command.install_packages.push(arg);
+                }
             } else if (command.type === null && options.exprs.length === 0 && r_script === null) {
                 if (arg === "env") {
                     command.type = "env";
@@ -628,12 +634,24 @@ async function main() {
             "Rscript", "-e", "rwasm::build('.', out_dir = '/out')"
         ];
         if (options.debug) console.log("docker " + docker_args.join(" "));
+
+        const tgz_before = new Set(
+            fs.readdirSync(out_path).filter(f => f.endsWith(".tgz"))
+        );
+
         const proc = spawn("docker", docker_args, { stdio: "inherit" });
         proc.on("error", e => {
             console.error("ERROR: " + e.message);
             process.exit(1);
         });
-        proc.on("close", code => process.exit(code ?? 0));
+        proc.on("close", code => {
+            if (code === 0) {
+                const built = fs.readdirSync(out_path)
+                    .filter(f => f.endsWith(".tgz") && !tgz_before.has(f));
+                for (const f of built) console.log(path.join(out_path, f));
+            }
+            process.exit(code ?? 0);
+        });
         return;
     }
 
@@ -647,7 +665,7 @@ async function main() {
 
     if (command.type === "install") {
         if (command.install_packages.length === 0) {
-            console.error("ERROR: 'rw install' requires at least one package name");
+            console.error("ERROR: 'rw install' requires at least one package name or directory");
             process.exit(1);
         }
         if (!options.persistent) {
@@ -657,6 +675,48 @@ async function main() {
         if (!options.r_libs_user) {
             console.error("ERROR: 'rw install' with --persistent requires --r-libs-user=<dir> or r-libs-user in .rwconfig");
             process.exit(1);
+        }
+
+        // Docker build phase: build each package directory, collect tarballs
+        if (command.install_docker) {
+            const uid = process.getuid();
+            const gid = process.getgid();
+            const out_path = process.cwd();
+            const tarballs = [];
+
+            for (const pkg_dir of command.install_packages) {
+                const pkg_path = normalize_path(pkg_dir, "package directory");
+                const docker_args = [
+                    "run", "--rm",
+                    "-u", `${uid}:${gid}`,
+                    "-v", `${pkg_path}:/src`,
+                    "-v", `${out_path}:/out`,
+                    "-w", "/src",
+                    "ghcr.io/r-wasm/webr:main",
+                    "Rscript", "-e", "rwasm::build('.', out_dir = '/out')"
+                ];
+                if (options.debug) console.log("docker " + docker_args.join(" "));
+                const tgz_before = new Set(
+                    fs.readdirSync(out_path).filter(f => f.endsWith(".tgz"))
+                );
+                await new Promise((resolve, reject) => {
+                    const proc = spawn("docker", docker_args, { stdio: "inherit" });
+                    proc.on("error", reject);
+                    proc.on("close", code => {
+                        if (code !== 0) reject(new Error(`Docker exited with code ${code}`));
+                        else resolve();
+                    });
+                }).catch(e => { console.error("ERROR: " + e.message); process.exit(1); });
+                const built = fs.readdirSync(out_path)
+                    .filter(f => f.endsWith(".tgz") && !tgz_before.has(f));
+                tarballs.push(...built);
+            }
+
+            if (tarballs.length === 0) {
+                console.error("ERROR: Docker build produced no tarballs");
+                process.exit(1);
+            }
+            command.install_packages = tarballs;
         }
 
         // Build install expressions
