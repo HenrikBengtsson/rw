@@ -777,7 +777,7 @@ async function main() {
         try {
             await run(options);
         } catch (e) {
-            console.error("ERROR: " + e.message);
+            if (!e.r_error) console.error("ERROR: " + e.message);
             process.exit(1);
         }
         process.exit(0);
@@ -808,7 +808,7 @@ async function main() {
         try {
             await run(options);
         } catch (e) {
-            console.error("ERROR: " + e.message);
+            if (!e.r_error) console.error("ERROR: " + e.message);
             process.exit(1);
         }
         process.exit(0);
@@ -824,7 +824,7 @@ async function main() {
     try {
         await run(options);
     } catch (e) {
-        console.error("ERROR: " + e.message);
+        if (!e.r_error) console.error("ERROR: " + e.message);
         process.exit(1);
     }
 

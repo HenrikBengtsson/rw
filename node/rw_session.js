@@ -123,8 +123,7 @@ attach(list(install.packages = local({
       }
 
       if (!pkg %in% rownames(info)) {
-        warning(paste("Requested package", pkg, "not found in webR binary repo."))
-        next
+        stop(paste("Requested package", pkg, "not found in webR binary repo."))
       }
 
       repo <- info[pkg, "Repository"]
@@ -269,8 +268,7 @@ export class RwSession {
             code = code.join("\n");
         }
 
-        let shelter = await new this.webR.Shelter();
-
+        // Apply timeout wrapper: converts interrupt into a stop() call
         let timeout_id = null;
         let timeout_promise = new Promise((resolve, reject) => {
             if (timeout > 0) {
@@ -286,9 +284,17 @@ export class RwSession {
             }
         });
 
+        // Reset error flag, then wrap code so any unhandled error sets it.
+        // withCallingHandlers lets the error propagate normally (R prints it
+        // to stderr as usual) while we capture the fact that it occurred.
+        await this.webR.evalRVoid(".rw_had_error_ <- FALSE");
+        code = `withCallingHandlers({\n${code}\n}, error = function(e) { .rw_had_error_ <<- TRUE })`;
+
         if (this.debug) {
             console.log(code);
         }
+
+        let shelter = await new this.webR.Shelter();
 
         let capture_promise = shelter.captureR(code, {
             withAutoprint: true,
@@ -325,6 +331,14 @@ export class RwSession {
         }
 
         shelter.purge();
+
+        // Check the error flag set by the withCallingHandlers wrapper
+        const had_error = await this.webR.evalRRaw("isTRUE(.rw_had_error_)", "boolean");
+        if (had_error) {
+            const e = new Error("");
+            e.r_error = true;
+            throw e;
+        }
 
         return response;
     }
