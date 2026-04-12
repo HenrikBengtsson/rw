@@ -143,6 +143,7 @@ Usage:
   rw [options] --expr="..."
   rw [options] --persistent install <pkg> [pkg ...]
   rw [options] --persistent install --docker <dir> [dir ...]
+  rw [options] --persistent uninstall <pkg> [pkg ...]
   rw build --docker [<dir>]
   rw env list
   rw env get <field>
@@ -268,13 +269,14 @@ export function parse_args(args) {
     };
 
     const command = {
-        type: null,      // null | "env" | "config" | "install"
+        type: null,      // null | "env" | "config" | "install" | "uninstall" | "build"
         action: null,    // "list" | "get" | "set" | "unset"
         scope: null,     // null (unset) | "local" (./.rwconfig) | "global" (~/.rwconfig)
         field: null,
         value: null,
         install_packages: [],
         install_docker: false,
+        uninstall_packages: [],
         build_path: null,
         build_docker: false
     };
@@ -365,6 +367,8 @@ export function parse_args(args) {
                     // package name or local path
                     command.install_packages.push(arg);
                 }
+            } else if (command.type === "uninstall") {
+                command.uninstall_packages.push(arg);
             } else if (command.type === null && options.exprs.length === 0 && r_script === null) {
                 if (arg === "env") {
                     command.type = "env";
@@ -372,6 +376,8 @@ export function parse_args(args) {
                     command.type = "config";
                 } else if (arg === "install") {
                     command.type = "install";
+                } else if (arg === "uninstall") {
+                    command.type = "uninstall";
                 } else if (arg === "build") {
                     command.type = "build";
                 } else {
@@ -767,6 +773,37 @@ async function main() {
             pkg => `install.packages(${JSON.stringify(pkg)})`
         );
         options.exprs = install_exprs;
+
+        try {
+            await run(options);
+        } catch (e) {
+            console.error("ERROR: " + e.message);
+            process.exit(1);
+        }
+        process.exit(0);
+    }
+
+    if (command.type === "uninstall") {
+        if (command.uninstall_packages.length === 0) {
+            console.error("ERROR: 'rw uninstall' requires at least one package name");
+            process.exit(1);
+        }
+        if (!options.persistent) {
+            console.error("ERROR: 'rw uninstall' requires --persistent flag");
+            process.exit(1);
+        }
+        if (!options.r_libs_user) {
+            console.error("ERROR: 'rw uninstall' with --persistent requires --r-libs-user=<dir> or r-libs-user in .rwconfig");
+            process.exit(1);
+        }
+
+        if (options.verbose) {
+            for (const pkg of command.uninstall_packages) {
+                console.error(`Uninstalling package '${pkg}'`);
+            }
+        }
+        const pkgs_r = `c(${command.uninstall_packages.map(p => JSON.stringify(p)).join(", ")})`;
+        options.exprs = [`remove.packages(${pkgs_r}, lib = .libPaths()[1])`];
 
         try {
             await run(options);
