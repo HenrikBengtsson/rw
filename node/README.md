@@ -7,11 +7,11 @@ to NPM that depends on it._
 ## TL;DR
 
 The `rw` tools is an Rscript-like command-line-interface (CLI) tool
-for running R code in a sandboxed WebAssembly environment via Node.js
-and **[webR]**, e.g.
+for running R code in an **[webR]** WebAssembly environment via either
+the [Node.js] or the [Deno] JavaScript engines, e.g.
 
 ```sh
-$ rw --prologue=trusted.R untrusted.R
+$ rw --r-libs=~/R/webR --prologue=trusted.R untrusted.R
 ```
 
 This can be useful when we need to evaluate arbitrary, untrusted R
@@ -21,14 +21,46 @@ having to go the extra mile to upload packages online and then testing
 it in the web browser at <https://webr.sh/>.
 
 
-## Installation
+## Run without Installation
 
-Install the package from NPM
-(<https://www.npmjs.com/package/@henrikbengtsson/rw>) as:
+Using Node:
 
 ```sh
-npm install -g @henrikbengtsson/rw
+$ npx @henrikbengtsson/rw --expr="sum(1:100)"
+[1] 5050
 ```
+
+Using Deno:
+
+```sh
+$ deno run --quiet --allow-all npm:@henrikbengtsson/rw --expr='sum(1:100)'
+[1] 5050
+```
+
+Technically, you can use `--allow-env --allow-read --allow-sys` instead of `--allow-all`.
+
+
+## Installation
+
+Node:
+
+```sh
+npm install --global @henrikbengtsson/rw
+```
+
+The `rw` executable is installed to the `bin/` subfolder under `npm
+config get prefix`. Prepend that to your `PATH`, e.g. `export
+PATH=$(npm config get prefix)/bin:$PATH`.
+
+Deno:
+
+```sh
+deno install --global --allow-env --allow-read --allow-sys npm:@henrikbengtsson/rw
+```
+
+The `rw` executable is installed to `~/.deno/bin/`. Prepend that to
+your `PATH`, e.g. `export PATH=~/.deno/bin:$PATH`.
+
 
 ## Command-line Interface
 
@@ -137,10 +169,12 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.110
+Version: 0.0.111
 License: MIT
 Author: Henrik Bengtsson
 ```
 
 
 [webR]: https://github.com/r-wasm/webr/
+[Node.js]: https://nodejs.org/en/
+[Deno]: https://deno.com/
