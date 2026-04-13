@@ -1,8 +1,8 @@
 import { WebR } from "webr";
-import fs from "fs";
-import os from "os";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // Reconstruct __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
