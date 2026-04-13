@@ -206,12 +206,17 @@ Examples:
   rw --timeout=3.5 --expr="slow <- function() { Sys.sleep(5); 42 }" \\
                    --expr="tryCatch(slow(), interrupt = identity)"
 
-  ## Install a package persistently on host
-  rw --persistent --r-libs-user=~/R/wasm32-unknown-emscripten-library/4.5 install praise
-  rw --expr="message(praise::praise())"
+  ## Configure R package library on host
+  mkdir -p ~/R/wasm32-unknown-emscripten-library/4.5
+  rw config set r-libs-user ~/R/wasm32-unknown-emscripten-library/4.5
+  rw config get r-libs-user
+
+  ## Install a package persistently to package library on host
+  rw --persistent install praise
+  rw --persistent --expr="message(praise::praise())"
 
   ## An R session with the R user library on host
-  rw --r-libs-user=~/R/wasm32-unknown-emscripten-library/4.5 main.R
+  rw --persistent main.R
 
   ## Evaluate untrusted R code in sandbox, with data passed in
   ## and out via a bastion folder accessible only to prologue/epilogue
@@ -224,14 +229,9 @@ Examples:
   Rscript -e "data_out <- readRDS('bastion/out.rds')" -e "utils::str(data_out)"
 
   ## Show runtime environment (R/webR versions, resolved paths, etc.)
-  rw env list
-  rw env get r-version
   rw env get webr-version
-
-  ## Show and manage ./.rwconfig settings
-  rw config list
-  rw config get r-libs-user
-  rw config set r-libs-user ~/R/wasm32-unknown-emscripten-library/4.5
+  rw env get r-version
+  rw env list
 
   ## Build a webR binary of an R package via Docker
   rw build --docker .
