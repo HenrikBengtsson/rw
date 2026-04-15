@@ -993,5 +993,13 @@ async function main() {
     process.exit(exit_code);
 }
 
-// Run CLI
-main();
+// Cross-runtime entry-point guard:
+//   Deno  – import.meta.main is true only when this file is the entry point
+//   Node  – compare the resolved file URL against process.argv[1]
+const isMain = typeof globalThis.Deno !== "undefined"
+    ? import.meta.main
+    : process.argv[1] != null &&
+      fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+if (isMain) main();
+
+export { load_rwconfig, write_rwconfig, unset_rwconfig, validate_sandbox };

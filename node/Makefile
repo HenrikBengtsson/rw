@@ -16,6 +16,11 @@ node-install:
 deno-install:
 	deno install --global -f --name rw --config deno.json --allow-run --allow-read --allow-write --allow-sys --allow-env --allow-net cli.js
 
+tests: deno-tests
+
+deno-tests:
+	deno task test
+
 ## Regenerate README.md
 README.md: _README.md.tmpl
 	@bfr=$$(cat "$<"); \
@@ -24,6 +29,7 @@ README.md: _README.md.tmpl
 	printf "$$bfr" > $@
 	grep -F "Version:" "$@"
 	@echo "README.md"
+
 
 pack: install README.md
 	npm pack

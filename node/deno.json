@@ -1,5 +1,9 @@
 {
     "imports": {
         "webr": "npm:webr"
+    },
+    "nodeModulesDir": "auto",
+    "tasks": {
+        "test": "deno test --allow-read --allow-write --allow-env --allow-sys tests/"
     }
 }
