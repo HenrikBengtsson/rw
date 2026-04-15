@@ -5,8 +5,8 @@
  * Each test spawns a full `rw` process (webR startup included), so these are
  * intentionally slow (~10-30 s each).  Run separately:
  *
- *   deno task escape-tests
- *   make escape-tests
+ *   deno task deno-escape-tests
+ *   make deno-escape-tests
  *
  * Requires `rw` to be installed:  make deno-install
  */

@@ -21,8 +21,13 @@ tests: deno-tests
 deno-tests:
 	deno task test
 
-escape-tests:
-	deno task escape-tests
+escape-tests: deno-escape-tests node-escape-tests
+
+deno-escape-tests:
+	deno task deno-escape-tests
+
+node-escape-tests:
+	node --test tests/escapes_node_test.js
 
 ## Regenerate README.md
 README.md: _README.md.tmpl

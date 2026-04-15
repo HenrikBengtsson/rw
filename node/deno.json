@@ -5,6 +5,6 @@
     "nodeModulesDir": "auto",
     "tasks": {
         "test": "deno test --allow-read --allow-write --allow-env --allow-sys tests/cli_test.js tests/rw_session_test.js",
-        "escape-tests": "deno test --allow-read --allow-write --allow-env --allow-sys --allow-run tests/escapes_test.js"
+        "deno-escape-tests": "deno test --allow-read --allow-write --allow-env --allow-sys --allow-run tests/escapes_deno_test.js"
     }
 }
