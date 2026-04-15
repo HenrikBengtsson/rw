@@ -38,6 +38,7 @@
         "index.js",
         "rw_session.js",
         "cli.js",
-        "rw_worker.js"
+        "rw_worker.js",
+        "deno.json"
     ]
 }

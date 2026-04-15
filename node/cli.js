@@ -135,13 +135,14 @@ function validate_sandbox(value) {
 }
 
 /**
- * Spawn the worker (Stage 2) with a JSON work spec on its stdin.
- * stdout/stderr are inherited so worker output flows directly to the terminal.
- * @param {Object} spec - Work spec for the worker
+ * Spawn the worker under Node.js.
+ * The child inherits the parent process's capabilities — no privilege
+ * separation, but correct for plain Node usage.
+ * @param {string} worker_path
+ * @param {Object} spec
  * @returns {Promise<number>} Worker exit code
  */
-async function spawn_worker(spec) {
-    const worker_path = path.join(__dirname, "rw_worker.js");
+async function node_spawn_worker(worker_path, spec) {
     return new Promise((resolve, reject) => {
         const proc = spawn(process.execPath, [worker_path], {
             stdio: ["pipe", "inherit", "inherit"]
@@ -151,6 +152,93 @@ async function spawn_worker(spec) {
         proc.on("error", reject);
         proc.on("close", code => resolve(code ?? 0));
     });
+}
+
+/**
+ * Derive the minimal Deno --allow-read paths needed by the worker.
+ * Always includes the package directory (worker + session scripts,
+ * node_modules/webr).  Adds any host paths referenced in the spec.
+ * @param {Object} spec
+ * @returns {string[]}
+ */
+function deno_read_paths(spec) {
+    const paths = [__dirname];
+    if (spec.task === "run") {
+        const o = spec.options;
+        if (o.r_libs_user)  paths.push(o.r_libs_user);
+        if (o.bastion_host) paths.push(o.bastion_host);
+        for (const bind of (o.binds ?? [])) paths.push(bind.host);
+    }
+    return paths;
+}
+
+/**
+ * Derive the minimal Deno --allow-write paths needed by the worker.
+ * Only r_libs_user requires write access (persistent package installs).
+ * @param {Object} spec
+ * @returns {string[]}
+ */
+function deno_write_paths(spec) {
+    const paths = [];
+    if (spec.task === "run" && spec.options.r_libs_user) {
+        paths.push(spec.options.r_libs_user);
+    }
+    return paths;
+}
+
+/**
+ * Spawn the worker under Deno using Deno.Command with explicit, minimal
+ * permissions derived from the work spec.  The child does NOT inherit the
+ * supervisor's permission set — this is the privilege-separation boundary.
+ * @param {string} worker_path
+ * @param {Object} spec
+ * @returns {Promise<number>} Worker exit code
+ */
+async function deno_spawn_worker(worker_path, spec) {
+    const read_paths  = deno_read_paths(spec);
+    const write_paths = deno_write_paths(spec);
+
+    const args = [
+        "run",
+        "--allow-env",
+        "--allow-sys",
+        `--allow-read=${read_paths.join(",")}`,
+    ];
+    if (write_paths.length > 0) {
+        args.push(`--allow-write=${write_paths.join(",")}`);
+        args.push("--allow-net");  // needed to download packages when --persistent
+    }
+    args.push(worker_path);
+
+    // Use globalThis.Deno so this file remains parseable under Node.js
+    const cmd = new globalThis.Deno.Command(globalThis.Deno.execPath(), {
+        args,
+        stdin:  "piped",
+        stdout: "inherit",
+        stderr: "inherit"
+    });
+
+    const proc   = cmd.spawn();
+    const writer = proc.stdin.getWriter();
+    await writer.write(new TextEncoder().encode(JSON.stringify(spec)));
+    await writer.close();
+    const { code } = await proc.status;
+    return code;
+}
+
+/**
+ * Spawn the worker (Stage 2) with a JSON work spec on its stdin.
+ * Dispatches to deno_spawn_worker (privilege-separated) when running under
+ * Deno, and node_spawn_worker (inherited capabilities) under Node.js.
+ * @param {Object} spec - Work spec for the worker
+ * @returns {Promise<number>} Worker exit code
+ */
+async function spawn_worker(spec) {
+    const worker_path = path.join(__dirname, "rw_worker.js");
+    if (typeof globalThis.Deno !== "undefined") {
+        return deno_spawn_worker(worker_path, spec);
+    }
+    return node_spawn_worker(worker_path, spec);
 }
 
 /**

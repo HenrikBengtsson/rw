@@ -7,9 +7,14 @@ all: install README.md
 docs:
 	npx jsdoc index.js -d docs
 
-install:
+install: node-install deno-install
+
+node-install:
 	npm install .
 	npm install -g .
+
+deno-install:
+	deno install --global -f --name rw --config deno.json --allow-run --allow-read --allow-sys --allow-env cli.js
 
 ## Regenerate README.md
 README.md: _README.md.tmpl

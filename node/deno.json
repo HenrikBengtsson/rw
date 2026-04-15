@@ -1,0 +1,5 @@
+{
+    "imports": {
+        "webr": "npm:webr"
+    }
+}
