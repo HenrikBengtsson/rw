@@ -14,7 +14,7 @@ node-install:
 	npm install -g .
 
 deno-install:
-	deno install --global -f --name rw --config deno.json --allow-run --allow-read --allow-sys --allow-env cli.js
+	deno install --global -f --name rw --config deno.json --allow-run --allow-read --allow-write --allow-sys --allow-env --allow-net cli.js
 
 ## Regenerate README.md
 README.md: _README.md.tmpl

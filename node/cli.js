@@ -162,7 +162,8 @@ async function node_spawn_worker(worker_path, spec) {
  * @returns {string[]}
  */
 function deno_read_paths(spec) {
-    const paths = [__dirname];
+    // /dev is needed by webR's Emscripten runtime for stdio setup (/dev/stdin etc.)
+    const paths = [__dirname, "/dev"];
     if (spec.task === "run") {
         const o = spec.options;
         if (o.r_libs_user)  paths.push(o.r_libs_user);
@@ -174,14 +175,19 @@ function deno_read_paths(spec) {
 
 /**
  * Derive the minimal Deno --allow-write paths needed by the worker.
- * Only r_libs_user requires write access (persistent package installs).
+ * __dirname is always required: webR's WASM runtime writes to the package dir.
+ * r_libs_user (and /tmp) are added for persistent package installs.
  * @param {Object} spec
  * @returns {string[]}
  */
 function deno_write_paths(spec) {
-    const paths = [];
+    // webR's internal worker_threads.Worker writes to the package directory
+    // even for basic R evaluation (e.g. compiled WASM module caches).
+    // /dev is needed by webR's Emscripten runtime for stdio setup (/dev/stdin etc.)
+    const paths = [__dirname, "/dev"];
     if (spec.task === "run" && spec.options.r_libs_user) {
         paths.push(spec.options.r_libs_user);
+        paths.push("/tmp");  // webR writes temp files during package download/extraction
     }
     return paths;
 }
@@ -197,20 +203,23 @@ function deno_write_paths(spec) {
 async function deno_spawn_worker(worker_path, spec) {
     const read_paths  = deno_read_paths(spec);
     const write_paths = deno_write_paths(spec);
+    const needs_net   = spec.task === "run" && !!spec.options?.r_libs_user;
 
     const args = [
         "run",
         "--allow-env",
         "--allow-sys",
         `--allow-read=${read_paths.join(",")}`,
+        `--allow-write=${write_paths.join(",")}`,
     ];
-    if (write_paths.length > 0) {
-        args.push(`--allow-write=${write_paths.join(",")}`);
+    if (needs_net) {
         args.push("--allow-net");  // needed to download packages when --persistent
+        args.push("--allow-run");  // needed to spawn tar for package extraction
     }
     args.push(worker_path);
 
     // Use globalThis.Deno so this file remains parseable under Node.js
+    if (spec.options?.debug) process.stderr.write(`[deno_spawn_worker] ${[globalThis.Deno.execPath(), ...args].join(" ")}\n`);
     const cmd = new globalThis.Deno.Command(globalThis.Deno.execPath(), {
         args,
         stdin:  "piped",
@@ -618,6 +627,12 @@ export function parse_args(args) {
     if (options.bastion_host === null && fs.existsSync("bastion")) {
         options.bastion_host = "bastion";
     }
+
+    // /dev/stdin is a special file that Deno cannot open via readFileSync
+    // without --allow-all.  Treat it as an alias for stdin (fd 0).
+    if (r_script === "/dev/stdin") r_script = null;
+    if (r_prologue_script === "/dev/stdin") r_prologue_script = null;
+    if (r_epilogue_script === "/dev/stdin") r_epilogue_script = null;
 
     // Normalize all paths now that all sources have been considered
     if (r_script !== null) r_script = normalize_path(r_script, "host file");

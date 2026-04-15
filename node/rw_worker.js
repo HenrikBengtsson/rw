@@ -18,6 +18,24 @@
  *   { "task": "env",  "field": null | "webr-version" | "r-version" | "<field>" }
  */
 
+// Under Deno, node:worker_threads.Worker instances do NOT inherit the parent's
+// Deno permissions.  webR spawns its own internal Worker to run the R/WASM
+// runtime, so that worker gets no --allow-net etc. even if this process does.
+// Patch the constructor to forward permissions before webR ever imports it.
+if (typeof globalThis.Deno !== "undefined") {
+    // ESM namespace objects are sealed, so we go through createRequire to get
+    // the mutable CJS exports object that npm packages (like webR) also use.
+    const { createRequire } = await import("node:module");
+    const req = createRequire(import.meta.url);
+    const wt = req("node:worker_threads");
+    const OrigWorker = wt.Worker;
+    wt.Worker = class extends OrigWorker {
+        constructor(filename, options = {}) {
+            super(filename, { ...options, deno: { permissions: "inherit" } });
+        }
+    };
+}
+
 import { run, get_webr_version, get_r_version, get_r_info } from "./rw_session.js";
 
 async function main() {
