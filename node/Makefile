@@ -21,6 +21,9 @@ tests: deno-tests
 deno-tests:
 	deno task test
 
+escape-tests:
+	deno task escape-tests
+
 ## Regenerate README.md
 README.md: _README.md.tmpl
 	@bfr=$$(cat "$<"); \
