@@ -304,6 +304,18 @@ Deno.test("parse_args: 'env get <field>' subcommand", () => {
     assertEquals(command.field, "webr-version");
 });
 
+Deno.test("parse_args: 'env get js-runtime' subcommand", () => {
+    const { command } = parse_clean([
+        "--no-config",
+        "env",
+        "get",
+        "js-runtime",
+    ]);
+    assertEquals(command.type, "env");
+    assertEquals(command.action, "get");
+    assertEquals(command.field, "js-runtime");
+});
+
 Deno.test("parse_args: 'config list' subcommand", () => {
     const { command } = parse_clean(["--no-config", "config", "list"]);
     assertEquals(command.type, "config");

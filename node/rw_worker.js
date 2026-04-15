@@ -15,7 +15,7 @@
  *                                  prologue_exprs, exprs, epilogue_exprs,
  *                                  timeout } }
  *
- *   { "task": "env",  "field": null | "webr-version" | "r-version" | "<field>" }
+ *   { "task": "env",  "field": null | "webr-version" | "r-version" | "js-runtime" | "<field>" }
  */
 
 // Under Deno, node:worker_threads.Worker instances do NOT inherit the parent's
@@ -53,6 +53,8 @@ async function main() {
             console.log(await get_webr_version());
         } else if (spec.field === "r-version") {
             await get_r_version();
+        } else if (spec.field === "js-runtime") {
+            console.log(typeof globalThis.Deno !== "undefined" ? "deno" : "node");
         } else {
             // null → list all fields; any other string → get that field
             await get_r_info(spec.field);
