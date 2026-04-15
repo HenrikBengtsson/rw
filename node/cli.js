@@ -9,6 +9,7 @@ import {
     version,
     author,
     license,
+    webr_version,
     normalize_path,
     read_code
 } from "./rw_session.js";
@@ -377,6 +378,7 @@ Examples:
 
 Version: ${version}
 JS Runtime: ${typeof globalThis.Deno !== "undefined" ? "deno " + globalThis.Deno.version.deno : "node " + process.version}
+webR: ${webr_version}
 License: ${license}
 Author: ${author}
 `);
