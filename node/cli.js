@@ -376,6 +376,7 @@ Examples:
   rw build --docker path/to/mypkg
 
 Version: ${version}
+JS Runtime: ${typeof globalThis.Deno !== "undefined" ? "deno " + globalThis.Deno.version.deno : "node " + process.version}
 License: ${license}
 Author: ${author}
 `);
