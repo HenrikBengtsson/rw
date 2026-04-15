@@ -3,12 +3,20 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 // Reconstruct __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const package_json = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+
+// Read the webR version from its package.json — avoids spawning a WebR worker
+const _require = createRequire(import.meta.url);
+const _webr_pkg_json = JSON.parse(fs.readFileSync(
+    path.join(path.dirname(_require.resolve('webr')), '..', 'package.json'), 'utf8'));
+/** webR package version (resolved without instantiating WebR) */
+export const webr_version = _webr_pkg_json.version;
 
 /** Package version */
 export const version = package_json.version;
@@ -529,8 +537,7 @@ export async function run(options = {}) {
  * @returns {Promise<string>} webR version
  */
 export async function get_webr_version() {
-    const webR = new WebR();
-    return webR.version;
+    return webr_version;
 }
 
 /**
