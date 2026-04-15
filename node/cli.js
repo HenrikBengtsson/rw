@@ -4,17 +4,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
     version,
     author,
     license,
     normalize_path,
-    read_code,
-    run,
-    get_webr_version,
-    get_r_version,
-    get_r_info
+    read_code
 } from "./rw_session.js";
+
+// Reconstruct __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const USER_RWCONFIG_PATH = path.join(os.homedir(), ".rwconfig");
 
@@ -131,6 +132,46 @@ function validate_sandbox(value) {
     if (value !== "webr") {
         throw new Error(`Unknown sandbox: '${value}'. Only 'webr' is supported.`);
     }
+}
+
+/**
+ * Spawn the worker (Stage 2) with a JSON work spec on its stdin.
+ * stdout/stderr are inherited so worker output flows directly to the terminal.
+ * @param {Object} spec - Work spec for the worker
+ * @returns {Promise<number>} Worker exit code
+ */
+async function spawn_worker(spec) {
+    const worker_path = path.join(__dirname, "rw_worker.js");
+    return new Promise((resolve, reject) => {
+        const proc = spawn(process.execPath, [worker_path], {
+            stdio: ["pipe", "inherit", "inherit"]
+        });
+        proc.stdin.write(JSON.stringify(spec), "utf8");
+        proc.stdin.end();
+        proc.on("error", reject);
+        proc.on("close", code => resolve(code ?? 0));
+    });
+}
+
+/**
+ * Extract only the fields that the worker's run() needs from parsed options.
+ * @param {Object} options - Full parsed options from parse_args()
+ * @returns {Object} Minimal run spec for the worker
+ */
+function make_run_spec(options) {
+    return {
+        debug:          options.debug,
+        verbose:        options.verbose,
+        webr_args:      options.webr_args,
+        r_libs_user:    options.r_libs_user,
+        binds:          options.binds,
+        bastion_host:   options.bastion_host,
+        shims:          options.shims,
+        prologue_exprs: options.prologue_exprs,
+        exprs:          options.exprs,
+        epilogue_exprs: options.epilogue_exprs,
+        timeout:        options.timeout
+    };
 }
 
 function show_help() {
@@ -569,25 +610,27 @@ async function main() {
 
     // Handle subcommands
     if (command.type === "env") {
+        let field;
         if (command.action === "list") {
-            await get_r_info();
+            field = null;
         } else if (command.action === "get") {
             if (command.field === null) {
                 console.error("ERROR: 'rw env get' requires a field name");
                 process.exit(1);
             }
-            if (command.field === "webr-version") {
-                console.log(await get_webr_version());
-            } else if (command.field === "r-version") {
-                await get_r_version();
-            } else {
-                await get_r_info(command.field);
-            }
+            field = command.field;
         } else {
             console.error("ERROR: Unknown env action. Use 'rw env list' or 'rw env get <field>'");
             process.exit(1);
         }
-        process.exit(0);
+        let exit_code;
+        try {
+            exit_code = await spawn_worker({ task: "env", field });
+        } catch (e) {
+            console.error("ERROR: " + e.message);
+            process.exit(1);
+        }
+        process.exit(exit_code);
     }
 
     if (command.type === "config") {
@@ -778,13 +821,14 @@ async function main() {
         );
         options.exprs = install_exprs;
 
+        let exit_code;
         try {
-            await run(options);
+            exit_code = await spawn_worker({ task: "run", options: make_run_spec(options) });
         } catch (e) {
-            if (!e.r_error) console.error("ERROR: " + e.message);
+            console.error("ERROR: " + e.message);
             process.exit(1);
         }
-        process.exit(0);
+        process.exit(exit_code);
     }
 
     if (command.type === "uninstall") {
@@ -809,13 +853,14 @@ async function main() {
         const pkgs_r = `c(${command.uninstall_packages.map(p => JSON.stringify(p)).join(", ")})`;
         options.exprs = [`remove.packages(${pkgs_r}, lib = .libPaths()[1])`];
 
+        let exit_code;
         try {
-            await run(options);
+            exit_code = await spawn_worker({ task: "run", options: make_run_spec(options) });
         } catch (e) {
-            if (!e.r_error) console.error("ERROR: " + e.message);
+            console.error("ERROR: " + e.message);
             process.exit(1);
         }
-        process.exit(0);
+        process.exit(exit_code);
     }
 
     // Read R code from stdin if piped/redirected and no code was given
@@ -835,14 +880,14 @@ async function main() {
     }
 
     // Run
+    let exit_code;
     try {
-        await run(options);
+        exit_code = await spawn_worker({ task: "run", options: make_run_spec(options) });
     } catch (e) {
-        if (!e.r_error) console.error("ERROR: " + e.message);
+        console.error("ERROR: " + e.message);
         process.exit(1);
     }
-
-    process.exit(0);
+    process.exit(exit_code);
 }
 
 // Run CLI
