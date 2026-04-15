@@ -995,11 +995,16 @@ async function main() {
 
 // Cross-runtime entry-point guard:
 //   Deno  – import.meta.main is true only when this file is the entry point
-//   Node  – compare the resolved file URL against process.argv[1]
+//   Node  – compare the resolved file URL against process.argv[1], following
+//           symlinks on both sides so that a globally installed bin symlink
+//           (npm install -g) is recognised as the entry point.
+function _realpath(p) {
+    try { return fs.realpathSync(p); } catch { return path.resolve(p); }
+}
 const isMain = typeof globalThis.Deno !== "undefined"
     ? import.meta.main
     : process.argv[1] != null &&
-      fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+      fileURLToPath(import.meta.url) === _realpath(process.argv[1]);
 if (isMain) main();
 
 export { load_rwconfig, write_rwconfig, unset_rwconfig, validate_sandbox };
