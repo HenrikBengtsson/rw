@@ -23,26 +23,24 @@ it in the web browser at <https://webr.sh/>.
 
 ## Run without Installation
 
-Using Node.js:
+### Using Node.js
 
 ```sh
 $ npx @henrikbengtsson/rw --expr="sum(1:100)"
 [1] 5050
 ```
 
-Using Deno:
+### Using Deno
 
 ```sh
 $ deno run --quiet --allow-all npm:@henrikbengtsson/rw --expr='sum(1:100)'
 [1] 5050
 ```
 
-Technically, you can use `--allow-env --allow-read --allow-sys` instead of `--allow-all`.
-
 
 ## Installation
 
-Node.js:
+### Using Node.js
 
 ```sh
 npm install --global @henrikbengtsson/rw
@@ -52,14 +50,21 @@ The `rw` executable is installed to the `bin/` subfolder under `npm
 config get prefix`. Prepend that to your `PATH`, e.g. `export
 PATH=$(npm config get prefix)/bin:$PATH`.
 
-Deno:
+
+### Using Deno
 
 ```sh
-deno install --global --allow-env --allow-read --allow-sys npm:@henrikbengtsson/rw
+deno install --global --allow-all npm:@henrikbengtsson/rw
 ```
 
 The `rw` executable is installed to `~/.deno/bin/`. Prepend that to
 your `PATH`, e.g. `export PATH=~/.deno/bin:$PATH`.
+
+To install the development version, use:
+
+```sh
+deno install --global --name rw-devel --allow-all https://raw.githubusercontent.com/futureverse/rw/refs/heads/develop/node/deno.json
+```
 
 
 ## Command-line Interface
