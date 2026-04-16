@@ -1,10 +1,7 @@
 name: Deno CI & Coverage
 
 on:
-  push:
-    branches: [ "main", "master", "develop" ]
-  pull_request:
-    branches: [ "main", "master", "develop" ]
+  workflow_dispatch:  # Enables manual triggering
 
 jobs:
   test-and-coverage:
