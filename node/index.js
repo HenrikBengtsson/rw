@@ -21,4 +21,4 @@ export {
     // High-level API
     run,
     get_r_info
-} from "./rw_session.js";
+} from "./src/rw_session.js";

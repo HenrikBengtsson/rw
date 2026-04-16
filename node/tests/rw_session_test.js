@@ -4,7 +4,7 @@
  */
 
 import { assertEquals, assertThrows } from "jsr:@std/assert";
-import { normalize_path, read_code } from "../rw_session.js";
+import { normalize_path, read_code } from "../src/rw_session.js";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs";

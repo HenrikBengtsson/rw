@@ -9,7 +9,7 @@ import { createRequire } from "node:module";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const package_json = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+const package_json = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 
 // Read the webR version from its package.json — avoids spawning a WebR worker
 const _require = createRequire(import.meta.url);

@@ -12,7 +12,7 @@ import {
     webr_version,
     normalize_path,
     read_code
-} from "./rw_session.js";
+} from "./src/rw_session.js";
 
 // Reconstruct __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -244,7 +244,7 @@ async function deno_spawn_worker(worker_path, spec) {
  * @returns {Promise<number>} Worker exit code
  */
 async function spawn_worker(spec) {
-    const worker_path = path.join(__dirname, "rw_worker.js");
+    const worker_path = path.join(__dirname, "src", "rw_worker.js");
     if (typeof globalThis.Deno !== "undefined") {
         return deno_spawn_worker(worker_path, spec);
     }

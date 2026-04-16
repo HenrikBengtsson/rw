@@ -29,6 +29,9 @@
         "ws": "^8.18.3"
     },
     "main": "index.js",
+    "exports": {
+        ".": "./index.js"
+    },
     "bin": {
         "rw": "cli.js"
     },
@@ -36,9 +39,9 @@
     "files": [
         "README.md",
         "index.js",
-        "rw_session.js",
+        "src/rw_session.js",
         "cli.js",
-        "rw_worker.js",
+        "src/rw_worker.js",
         "deno.json"
     ]
 }
