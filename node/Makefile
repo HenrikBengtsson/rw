@@ -19,18 +19,12 @@ deno-install:
 tests: deno-tests node-tests
 
 deno-tests:
-	deno task test
+	deno task check
 
 node-tests:
 	node --test 'tests/node/*.js'
 
 escape-tests: deno-escape-tests node-escape-tests
-
-deno-escape-tests:
-	deno task deno-escape-tests
-
-deno-examples-tests:
-	deno task deno-examples-tests
 
 node-escape-tests:
 	node --test tests/node/escapes_test.js
