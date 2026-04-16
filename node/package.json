@@ -1,47 +1,47 @@
 {
-    "name": "@henrikbengtsson/rw",
-    "version": "0.0.206",
-    "description": "Evaluate R Code within WebAssembly (WASM) via Node.js",
-    "keywords": [
-        "webR",
-        "wasm",
-        "R",
-        "statistics",
-        "programming",
-        "webassembly",
-        "emscripten",
-        "cli"
-    ],
-    "homepage": "https://github.com/futureverse/rw",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/futureverse/rw.git"
-    },
-    "bugs": {
-        "url": "https://github.com/futureverse/rw/issues"
-    },
-    "author": {
-        "name": "Henrik Bengtsson"
-    },
-    "license": "MIT",
-    "dependencies": {
-        "webr": "^0.5.8",
-        "ws": "^8.18.3"
-    },
-    "main": "index.js",
-    "exports": {
-        ".": "./index.js"
-    },
-    "bin": {
-        "rw": "src/cli.js"
-    },
-    "type": "module",
-    "files": [
-        "README.md",
-        "index.js",
-        "src/cli.js",
-        "src/rw_session.js",
-        "src/rw_worker.js",
-        "deno.json"
-    ]
+  "name": "@henrikbengtsson/rw",
+  "version": "0.0.206",
+  "description": "Evaluate R Code within WebAssembly (WASM) via Node.js",
+  "keywords": [
+    "webR",
+    "wasm",
+    "R",
+    "statistics",
+    "programming",
+    "webassembly",
+    "emscripten",
+    "cli"
+  ],
+  "homepage": "https://github.com/futureverse/rw",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/futureverse/rw.git"
+  },
+  "bugs": {
+    "url": "https://github.com/futureverse/rw/issues"
+  },
+  "author": {
+    "name": "Henrik Bengtsson"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "webr": "^0.5.8",
+    "ws": "^8.18.3"
+  },
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "bin": {
+    "rw": "src/cli.js"
+  },
+  "type": "module",
+  "files": [
+    "README.md",
+    "index.js",
+    "src/cli.js",
+    "src/rw_session.js",
+    "src/rw_worker.js",
+    "deno.json"
+  ]
 }

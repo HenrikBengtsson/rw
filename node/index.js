@@ -4,21 +4,18 @@
  */
 
 export {
-    // Metadata
-    version,
-    author,
-    license,
-
-    // Utility functions
-    normalize_path,
-    read_code,
-    get_install_packages_shim,
-    get_webr_install_shim,
-
-    // Session class
-    RwSession,
-
-    // High-level API
-    run,
-    get_r_info
+  author,
+  get_install_packages_shim,
+  get_r_info,
+  get_webr_install_shim,
+  license,
+  // Utility functions
+  normalize_path,
+  read_code,
+  // High-level API
+  run,
+  // Session class
+  RwSession,
+  // Metadata
+  version,
 } from "./src/rw_session.js";
