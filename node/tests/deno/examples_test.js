@@ -73,7 +73,10 @@ Deno.test({
   sanitizeOps: false,
   timeout: 120_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config", "--expr=sum(1:100)"]);
+    const { code, stdout, stderr } = await rw([
+      "--no-config",
+      "--expr=sum(1:100)",
+    ]);
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert(stdout.includes("5050"), `Expected 5050 in stdout:\n${stdout}`);
   },
@@ -85,7 +88,9 @@ Deno.test({
   sanitizeOps: false,
   timeout: 120_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config"], { stdin: "1 + 2\n" });
+    const { code, stdout, stderr } = await rw(["--no-config"], {
+      stdin: "1 + 2\n",
+    });
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert(stdout.includes("3"), `Expected 3 in stdout:\n${stdout}`);
   },
@@ -97,7 +102,9 @@ Deno.test({
   sanitizeOps: false,
   timeout: 120_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config"], { stdin: "sum(1:100)\n" });
+    const { code, stdout, stderr } = await rw(["--no-config"], {
+      stdin: "sum(1:100)\n",
+    });
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert(stdout.includes("5050"), `Expected 5050 in stdout:\n${stdout}`);
   },
@@ -128,7 +135,9 @@ Deno.test({
   sanitizeOps: false,
   timeout: 120_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config"], { stdin: "sum(1:100)\n" });
+    const { code, stdout, stderr } = await rw(["--no-config"], {
+      stdin: "sum(1:100)\n",
+    });
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert(stdout.includes("5050"), `Expected 5050 in stdout:\n${stdout}`);
   },
@@ -153,7 +162,8 @@ Deno.test({
       ]);
       assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
       assert(
-        stderr.includes("running script ...") || stdout.includes("running script ..."),
+        stderr.includes("running script ...") ||
+          stdout.includes("running script ..."),
         `Expected message() output, stdout: ${stdout}\nstderr: ${stderr}`,
       );
     } finally {
@@ -180,10 +190,16 @@ Deno.test({
     // Allow up to 6 s to account for Deno subprocess startup overhead.
     assert(
       elapsed < 6,
-      `Expected process to finish in <6 s (interrupted), took ${elapsed.toFixed(1)} s`,
+      `Expected process to finish in <6 s (interrupted), took ${
+        elapsed.toFixed(1)
+      } s`,
     );
     // tryCatch catches the interrupt, so R exits cleanly
-    assertEquals(code, 0, "Expected exit code 0 when interrupt is caught by tryCatch");
+    assertEquals(
+      code,
+      0,
+      "Expected exit code 0 when interrupt is caught by tryCatch",
+    );
   },
 });
 
@@ -193,7 +209,12 @@ Deno.test({
   sanitizeOps: false,
   timeout: 120_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config", "env", "get", "webr-version"]);
+    const { code, stdout, stderr } = await rw([
+      "--no-config",
+      "env",
+      "get",
+      "webr-version",
+    ]);
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assertMatch(
       stdout.trim(),
@@ -209,7 +230,12 @@ Deno.test({
   sanitizeOps: false,
   timeout: 120_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config", "env", "get", "r-version"]);
+    const { code, stdout, stderr } = await rw([
+      "--no-config",
+      "env",
+      "get",
+      "r-version",
+    ]);
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assertMatch(
       stdout.trim(),

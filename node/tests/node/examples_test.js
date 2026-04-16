@@ -132,10 +132,16 @@ describe("rw --help examples", () => {
     // The 5-second sleep must have been interrupted: finish well under 5 s
     assert.ok(
       elapsed < 5,
-      `Expected process to finish in <5 s (interrupted), took ${elapsed.toFixed(1)} s`,
+      `Expected process to finish in <5 s (interrupted), took ${
+        elapsed.toFixed(1)
+      } s`,
     );
     // tryCatch catches the interrupt, so R exits cleanly
-    assert.equal(code, 0, "Expected exit code 0 when interrupt is caught by tryCatch");
+    assert.equal(
+      code,
+      0,
+      "Expected exit code 0 when interrupt is caught by tryCatch",
+    );
   });
 
   // rw env get webr-version
