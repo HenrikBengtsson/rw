@@ -1,5 +1,5 @@
 /**
- * Unit tests for cli.js — parse_args() and rwconfig helpers.
+ * Unit tests for src/cli.js — parse_args() and rwconfig helpers.
  * Run with:  deno test --allow-read --allow-write --allow-env --allow-sys tests/cli_test.js
  */
 
@@ -10,7 +10,7 @@ import {
     write_rwconfig,
     unset_rwconfig,
     validate_sandbox,
-} from "../cli.js";
+} from "../src/cli.js";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs";

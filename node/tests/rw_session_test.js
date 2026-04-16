@@ -1,5 +1,5 @@
 /**
- * Unit tests for rw_session.js — normalize_path() and read_code().
+ * Unit tests for src/rw_session.js — normalize_path() and read_code().
  * Run with:  deno test --allow-read --allow-write --allow-env --allow-sys tests/rw_session_test.js
  */
 

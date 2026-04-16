@@ -5,7 +5,7 @@
  * Each test spawns a full `node cli.js` process (webR startup included), so
  * these are intentionally slow (~10-30 s each).  Run with:
  *
- *   node --test tests/escapes_node_test.js
+ *   node --test tests/node/escapes_test.js
  *   make node-escape-tests
  */
 
@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 // Helper
 // ---------------------------------------------------------------------------
 
-const CLI = fileURLToPath(new URL("../cli.js", import.meta.url));
+const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
 
 /**
  * Run cli.js under Node.js with R code supplied on stdin.
