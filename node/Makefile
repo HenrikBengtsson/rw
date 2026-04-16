@@ -16,18 +16,27 @@ node-install:
 deno-install:
 	deno install --global -f --name rw --config deno.json --allow-run --allow-read --allow-write --allow-sys --allow-env --allow-net src/cli.js
 
-tests: deno-tests
+tests: deno-tests node-tests
 
 deno-tests:
 	deno task test
+
+node-tests:
+	node --test 'tests/node/*.js'
 
 escape-tests: deno-escape-tests node-escape-tests
 
 deno-escape-tests:
 	deno task deno-escape-tests
 
+deno-examples-tests:
+	deno task deno-examples-tests
+
 node-escape-tests:
 	node --test tests/node/escapes_test.js
+
+node-examples-tests:
+	node --test tests/node/examples_test.js
 
 ## Regenerate README.md
 README.md: _README.md.tmpl

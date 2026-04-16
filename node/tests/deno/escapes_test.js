@@ -24,7 +24,7 @@ import * as path from "node:path";
 // regardless of which `rw` binary is first on PATH (the Node.js install would
 // have no sandbox restrictions and the tests would give false negatives).
 const CLI = new URL("../../src/cli.js", import.meta.url).pathname;
-const DENO_CFG = new URL("../deno.json", import.meta.url).pathname;
+const DENO_CFG = new URL("../../deno.json", import.meta.url).pathname;
 
 /**
  * Run cli.js under Deno (with full supervisor permissions) with R code on
