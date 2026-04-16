@@ -23,7 +23,7 @@ it in the web browser at <https://webr.sh/>.
 
 ## Run without Installation
 
-Using Node:
+Using Node.js:
 
 ```sh
 $ npx @henrikbengtsson/rw --expr="sum(1:100)"
@@ -42,7 +42,7 @@ Technically, you can use `--allow-env --allow-read --allow-sys` instead of `--al
 
 ## Installation
 
-Node:
+Node.js:
 
 ```sh
 npm install --global @henrikbengtsson/rw

@@ -146,7 +146,7 @@ function validate_sandbox(value) {
 /**
  * Spawn the worker under Node.js.
  * The child inherits the parent process's capabilities — no privilege
- * separation, but correct for plain Node usage.
+ * separation, but correct for plain Node.js usage.
  * @param {string} worker_path
  * @param {Object} spec
  * @returns {Promise<number>} Worker exit code
@@ -1133,10 +1133,10 @@ async function main() {
 }
 
 // Cross-runtime entry-point guard:
-//   Deno  – import.meta.main is true only when this file is the entry point
-//   Node  – compare the resolved file URL against process.argv[1], following
-//           symlinks on both sides so that a globally installed bin symlink
-//           (npm install -g) is recognised as the entry point.
+//   Deno    – import.meta.main is true only when this file is the entry point
+//   Node.js – compare the resolved file URL against process.argv[1], following
+//             symlinks on both sides so that a globally installed bin symlink
+//             (npm install -g) is recognised as the entry point.
 function _realpath(p) {
   try {
     return fs.realpathSync(p);
