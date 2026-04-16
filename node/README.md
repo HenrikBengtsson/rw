@@ -169,7 +169,9 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.111
+Version: 0.0.206
+JS Runtime: node 24.12.0
+webR: 0.5.8
 License: MIT
 Author: Henrik Bengtsson
 ```
