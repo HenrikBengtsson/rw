@@ -153,7 +153,11 @@ describe("rw --help examples", () => {
       "js-runtime",
     ]);
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
-    assert.equal(stdout.trim(), "node", `Expected 'node', got: ${stdout.trim()}`);
+    assert.equal(
+      stdout.trim(),
+      "node",
+      `Expected 'node', got: ${stdout.trim()}`,
+    );
   });
 
   // rw env get webr-version

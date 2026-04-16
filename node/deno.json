@@ -8,7 +8,7 @@
   "nodeModulesDir": "auto",
   "tasks": {
     "check": "deno test --allow-all",
-      "cov": "rm -rf cov_profile && deno test --allow-all --coverage=cov_profile && deno coverage cov_profile"
+    "cov": "rm -rf cov_profile && deno test --allow-all --coverage=cov_profile && deno coverage cov_profile"
   },
   "test": {
     "include": ["tests/"],
@@ -19,6 +19,6 @@
     "lineWidth": 80,
     "semiColons": true,
     "singleQuote": false,
-    "exclude": ["README.md"]
+    "exclude": ["README.md", "cov_profile"]
   }
 }

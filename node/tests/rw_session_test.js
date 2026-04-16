@@ -5,12 +5,12 @@
 
 import { assertEquals, assertThrows } from "jsr:@std/assert";
 import {
+  author,
   get_webr_install_shim,
+  license,
   normalize_path,
   read_code,
   version,
-  author,
-  license,
   webr_version,
 } from "../src/rw_session.js";
 import * as path from "node:path";

@@ -785,7 +785,11 @@ Deno.test("parse_args: --sandbox-opt shims trailing comma filters empty", () => 
 // ---------------------------------------------------------------------------
 
 Deno.test("parse_args: --debug logs --expr value", () => {
-  const { logged } = parse_clean_log(["--debug", "--no-config", "--expr=sum(1:100)"]);
+  const { logged } = parse_clean_log([
+    "--debug",
+    "--no-config",
+    "--expr=sum(1:100)",
+  ]);
   assertEquals(logged.some((l) => l.includes("expr=sum(1:100)")), true);
 });
 
@@ -806,7 +810,10 @@ Deno.test("parse_args: --debug logs --epilogue-expr value", () => {
     "--expr=1",
     "--epilogue-expr=cat('bye')",
   ]);
-  assertEquals(logged.some((l) => l.includes("epilogue_expr=cat('bye')")), true);
+  assertEquals(
+    logged.some((l) => l.includes("epilogue_expr=cat('bye')")),
+    true,
+  );
 });
 
 Deno.test("parse_args: --debug logs --r-libs-user with --persistent", () => {

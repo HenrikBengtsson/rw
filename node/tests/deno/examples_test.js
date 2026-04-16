@@ -216,7 +216,11 @@ Deno.test({
       "js-runtime",
     ]);
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
-    assertEquals(stdout.trim(), "deno", `Expected 'deno', got: ${stdout.trim()}`);
+    assertEquals(
+      stdout.trim(),
+      "deno",
+      `Expected 'deno', got: ${stdout.trim()}`,
+    );
   },
 });
 
