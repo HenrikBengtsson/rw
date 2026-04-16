@@ -17,6 +17,8 @@ import {
 // Reconstruct __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Package root is one level up from src/
+const __pkgdir = path.dirname(__dirname);
 
 const USER_RWCONFIG_PATH = path.join(os.homedir(), ".rwconfig");
 
@@ -170,7 +172,7 @@ async function node_spawn_worker(worker_path, spec) {
  */
 function deno_read_paths(spec) {
   // /dev is needed by webR's Emscripten runtime for stdio setup (/dev/stdin etc.)
-  const paths = [__dirname, "/dev"];
+  const paths = [__pkgdir, "/dev"];
   if (spec.task === "run") {
     const o = spec.options;
     if (o.r_libs_user) paths.push(o.r_libs_user);
@@ -182,7 +184,7 @@ function deno_read_paths(spec) {
 
 /**
  * Derive the minimal Deno --allow-write paths needed by the worker.
- * __dirname is always required: webR's WASM runtime writes to the package dir.
+ * __pkgdir is always required: webR's WASM runtime writes to the package dir.
  * r_libs_user (and /tmp) are added for persistent package installs.
  * @param {Object} spec
  * @returns {string[]}
@@ -191,7 +193,7 @@ function deno_write_paths(spec) {
   // webR's internal worker_threads.Worker writes to the package directory
   // even for basic R evaluation (e.g. compiled WASM module caches).
   // /dev is needed by webR's Emscripten runtime for stdio setup (/dev/stdin etc.)
-  const paths = [__dirname, "/dev"];
+  const paths = [__pkgdir, "/dev"];
   if (spec.task === "run" && spec.options.r_libs_user) {
     paths.push(spec.options.r_libs_user);
     paths.push("/tmp"); // webR writes temp files during package download/extraction
