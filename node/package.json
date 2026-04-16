@@ -1,6 +1,6 @@
 {
   "name": "@henrikbengtsson/rw",
-  "version": "0.0.206",
+  "version": "0.0.207",
   "description": "Evaluate R Code within WebAssembly (WASM) via Node.js",
   "keywords": [
     "webR",
@@ -25,7 +25,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@henrikbengtsson/rw": "^0.0.206",
     "webr": "^0.5.8",
     "ws": "^8.18.3"
   },

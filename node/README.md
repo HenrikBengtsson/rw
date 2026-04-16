@@ -174,7 +174,7 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.206
+Version: 0.0.207
 JS Runtime: node 24.12.0
 webR: 0.5.8
 License: MIT
