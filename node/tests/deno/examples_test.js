@@ -204,6 +204,23 @@ Deno.test({
 });
 
 Deno.test({
+  name: "rw env get js-runtime",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  timeout: 120_000,
+  async fn() {
+    const { code, stdout, stderr } = await rw([
+      "--no-config",
+      "env",
+      "get",
+      "js-runtime",
+    ]);
+    assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
+    assertEquals(stdout.trim(), "deno", `Expected 'deno', got: ${stdout.trim()}`);
+  },
+});
+
+Deno.test({
   name: "rw env get webr-version",
   sanitizeResources: false,
   sanitizeOps: false,

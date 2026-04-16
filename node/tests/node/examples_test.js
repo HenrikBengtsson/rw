@@ -144,6 +144,18 @@ describe("rw --help examples", () => {
     );
   });
 
+  // rw env get js-runtime
+  it("rw env get js-runtime", () => {
+    const { code, stdout, stderr } = rw([
+      "--no-config",
+      "env",
+      "get",
+      "js-runtime",
+    ]);
+    assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
+    assert.equal(stdout.trim(), "node", `Expected 'node', got: ${stdout.trim()}`);
+  });
+
   // rw env get webr-version
   it("rw env get webr-version", () => {
     const { code, stdout, stderr } = rw([

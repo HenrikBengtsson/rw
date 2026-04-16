@@ -4,7 +4,15 @@
  */
 
 import { assertEquals, assertThrows } from "jsr:@std/assert";
-import { normalize_path, read_code } from "../src/rw_session.js";
+import {
+  get_webr_install_shim,
+  normalize_path,
+  read_code,
+  version,
+  author,
+  license,
+  webr_version,
+} from "../src/rw_session.js";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs";
@@ -28,11 +36,14 @@ Deno.test("normalize_path: '~' expands to home directory", () => {
   assertEquals(result, os.homedir());
 });
 
-Deno.test("normalize_path: '~/...' expands relative to home", () => {
-  // Use the home dir itself to avoid creating a real subdir
-  const home = os.homedir();
-  const result = normalize_path("~");
-  assertEquals(result, home);
+Deno.test("normalize_path: '~/subdir' expands relative to home", () => {
+  const sub = fs.mkdtempSync(path.join(os.homedir(), "rw_np_test_"));
+  try {
+    const result = normalize_path("~/" + path.basename(sub));
+    assertEquals(result, sub);
+  } finally {
+    fs.rmSync(sub, { recursive: true });
+  }
 });
 
 Deno.test("normalize_path: relative path resolved to absolute", () => {
@@ -126,4 +137,60 @@ Deno.test("read_code: file with only blank lines returns empty array", () => {
   } finally {
     fs.unlinkSync(tmp);
   }
+});
+
+Deno.test("read_code: debug=true logs lines to console", () => {
+  const tmp = Deno.makeTempFileSync({ prefix: "rw_rc_", suffix: ".R" });
+  try {
+    fs.writeFileSync(tmp, "x <- 1\ny <- 2\n");
+    // Capture console.log output to verify debug logging fires
+    const logged = [];
+    const orig = console.log;
+    console.log = (...args) => logged.push(args.join(" "));
+    try {
+      const lines = read_code(tmp, "main", true);
+      assertEquals(lines, ["x <- 1", "y <- 2"]);
+    } finally {
+      console.log = orig;
+    }
+    assertEquals(logged.length, 2);
+    assertEquals(logged[0].includes("R main code"), true);
+  } finally {
+    fs.unlinkSync(tmp);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// get_webr_install_shim
+// ---------------------------------------------------------------------------
+
+Deno.test("get_webr_install_shim: returns a non-empty R code string", () => {
+  const shim = get_webr_install_shim();
+  assertEquals(typeof shim, "string");
+  assertEquals(shim.length > 0, true);
+  assertEquals(shim.includes("webr::install"), true);
+});
+
+// ---------------------------------------------------------------------------
+// metadata exports
+// ---------------------------------------------------------------------------
+
+Deno.test("version: is a semver string", () => {
+  assertEquals(typeof version, "string");
+  assertEquals(/^\d+\.\d+\.\d+/.test(version), true);
+});
+
+Deno.test("author: is a non-empty string", () => {
+  assertEquals(typeof author, "string");
+  assertEquals(author.length > 0, true);
+});
+
+Deno.test("license: is a non-empty string", () => {
+  assertEquals(typeof license, "string");
+  assertEquals(license.length > 0, true);
+});
+
+Deno.test("webr_version: is a semver string", () => {
+  assertEquals(typeof webr_version, "string");
+  assertEquals(/^\d+\.\d+\.\d+/.test(webr_version), true);
 });

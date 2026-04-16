@@ -33,6 +33,25 @@ function parse_clean(args) {
   }
 }
 
+/** Like parse_clean but also captures console.log output.
+ *  Returns { options, flags, command, logged } where logged is string[]. */
+function parse_clean_log(args) {
+  const orig = Deno.cwd();
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_test_" });
+  const logged = [];
+  const orig_log = console.log;
+  console.log = (...a) => logged.push(a.join(" "));
+  try {
+    Deno.chdir(tmp);
+    const result = parse_args(args);
+    return { ...result, logged };
+  } finally {
+    console.log = orig_log;
+    Deno.chdir(orig);
+    fs.rmSync(tmp, { recursive: true });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // parse_args — basic expression flags
 // ---------------------------------------------------------------------------
@@ -572,4 +591,345 @@ Deno.test("unset_rwconfig: returns false for missing field", () => {
 Deno.test("unset_rwconfig: returns false when file does not exist", () => {
   const removed = unset_rwconfig("sandbox", "/nonexistent/.rwconfig");
   assertEquals(removed, false);
+});
+
+// ---------------------------------------------------------------------------
+// parse_args — r-libs-user
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: --r-libs-user with --persistent sets r_libs_user", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_rlibs_" });
+  try {
+    const { options } = parse_clean([
+      "--no-config",
+      "--persistent",
+      `--r-libs-user=${tmp}`,
+      "--expr=1",
+    ]);
+    assertEquals(options.r_libs_user, tmp);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --r-libs-user without --persistent is null", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_rlibs_" });
+  try {
+    const { options } = parse_clean([
+      "--no-config",
+      `--r-libs-user=${tmp}`,
+      "--expr=1",
+    ]);
+    assertEquals(options.r_libs_user, null);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// parse_args — prologue/epilogue script files
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: --prologue=<file> reads script into prologue_exprs", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_pr_" });
+  const script = path.join(tmp, "prologue.R");
+  try {
+    fs.writeFileSync(script, "cat('before\\n')\n");
+    const { options } = parse_clean([
+      "--no-config",
+      `--prologue=${script}`,
+      "--expr=42L",
+    ]);
+    assertEquals(options.prologue_exprs, ["cat('before\\n')"]);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --epilogue=<file> reads script into epilogue_exprs", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_ep_" });
+  const script = path.join(tmp, "epilogue.R");
+  try {
+    fs.writeFileSync(script, "cat('after\\n')\n");
+    const { options } = parse_clean([
+      "--no-config",
+      "--expr=42L",
+      `--epilogue=${script}`,
+    ]);
+    assertEquals(options.epilogue_exprs, ["cat('after\\n')"]);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: prologue-expr and prologue script conflict throws", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_pr_" });
+  const script = path.join(tmp, "prologue.R");
+  fs.writeFileSync(script, "1\n");
+  try {
+    assertThrows(
+      () =>
+        parse_clean([
+          "--no-config",
+          "--prologue-expr=1",
+          `--prologue=${script}`,
+          "--expr=42L",
+        ]),
+      Error,
+      "R prologue script must not be specified",
+    );
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: epilogue-expr and epilogue script conflict throws", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_ep_" });
+  const script = path.join(tmp, "epilogue.R");
+  fs.writeFileSync(script, "1\n");
+  try {
+    assertThrows(
+      () =>
+        parse_clean([
+          "--no-config",
+          "--expr=42L",
+          "--epilogue-expr=1",
+          `--epilogue=${script}`,
+        ]),
+      Error,
+      "R epilogue script must not be specified",
+    );
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// parse_args — /dev/stdin
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: /dev/stdin treated as stdin (exprs stays empty)", () => {
+  // /dev/stdin is nulled out so that stdin is read later by main(); exprs=[].
+  const { options } = parse_clean(["--no-config", "/dev/stdin"]);
+  assertEquals(options.exprs, []);
+});
+
+// ---------------------------------------------------------------------------
+// parse_args — trailing args go into webr_args
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: trailing args after --expr go into webr_args", () => {
+  const { options } = parse_clean([
+    "--no-config",
+    "--expr=1",
+    "foo",
+    "bar",
+  ]);
+  assertEquals(options.webr_args.includes("--args"), true);
+  assertEquals(options.webr_args.includes("foo"), true);
+  assertEquals(options.webr_args.includes("bar"), true);
+});
+
+// ---------------------------------------------------------------------------
+// parse_args — subcommand error cases
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: 'env get <field> extra' throws", () => {
+  assertThrows(
+    () => parse_clean(["--no-config", "env", "get", "webr-version", "extra"]),
+    Error,
+    "Unexpected argument for 'rw env'",
+  );
+});
+
+Deno.test("parse_args: 'config set <field> <value> extra' throws", () => {
+  assertThrows(
+    () =>
+      parse_clean([
+        "--no-config",
+        "config",
+        "set",
+        "sandbox",
+        "webr",
+        "extra",
+      ]),
+    Error,
+    "Unexpected argument for 'rw config'",
+  );
+});
+
+Deno.test("parse_args: 'build --docker <path> extra' throws", () => {
+  assertThrows(
+    () => parse_clean(["--no-config", "build", "--docker", "mypkg", "extra"]),
+    Error,
+    "Unexpected argument for 'rw build'",
+  );
+});
+
+// ---------------------------------------------------------------------------
+// parse_args — sandbox-opt shims: empty strings filtered out
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: --sandbox-opt shims trailing comma filters empty", () => {
+  const { options } = parse_clean([
+    "--no-config",
+    "--sandbox-opt=shims=webr::install,",
+    "--expr=1",
+  ]);
+  // "webr::install," splits to ["webr::install", ""] — empty entry removed
+  assertEquals(options.shims, ["webr::install"]);
+});
+
+// ---------------------------------------------------------------------------
+// parse_args — --debug logging
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: --debug logs --expr value", () => {
+  const { logged } = parse_clean_log(["--debug", "--no-config", "--expr=sum(1:100)"]);
+  assertEquals(logged.some((l) => l.includes("expr=sum(1:100)")), true);
+});
+
+Deno.test("parse_args: --debug logs --prologue-expr value", () => {
+  const { logged } = parse_clean_log([
+    "--debug",
+    "--no-config",
+    "--prologue-expr=cat('hi')",
+    "--expr=1",
+  ]);
+  assertEquals(logged.some((l) => l.includes("prologue_expr=cat('hi')")), true);
+});
+
+Deno.test("parse_args: --debug logs --epilogue-expr value", () => {
+  const { logged } = parse_clean_log([
+    "--debug",
+    "--no-config",
+    "--expr=1",
+    "--epilogue-expr=cat('bye')",
+  ]);
+  assertEquals(logged.some((l) => l.includes("epilogue_expr=cat('bye')")), true);
+});
+
+Deno.test("parse_args: --debug logs --r-libs-user with --persistent", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_rlibs_" });
+  try {
+    const { logged } = parse_clean_log([
+      "--debug",
+      "--no-config",
+      "--persistent",
+      `--r-libs-user=${tmp}`,
+      "--expr=1",
+    ]);
+    assertEquals(logged.some((l) => l.includes(`r_libs_user=${tmp}`)), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --debug logs --bind value", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_bind_" });
+  try {
+    const { logged } = parse_clean_log([
+      "--debug",
+      "--no-config",
+      `--bind=${tmp}:/data`,
+      "--expr=1",
+    ]);
+    assertEquals(logged.some((l) => l.includes("Add bind=")), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --debug logs --bastion value", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_bastion_" });
+  try {
+    const { logged } = parse_clean_log([
+      "--debug",
+      "--no-config",
+      `--bastion=${tmp}`,
+      "--expr=1",
+    ]);
+    assertEquals(logged.some((l) => l.includes("bastion_host=")), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --debug logs --prologue script path", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_pr_" });
+  const script = path.join(tmp, "p.R");
+  fs.writeFileSync(script, "1\n");
+  try {
+    const { logged } = parse_clean_log([
+      "--debug",
+      "--no-config",
+      `--prologue=${script}`,
+      "--expr=1",
+    ]);
+    assertEquals(logged.some((l) => l.includes("r_prologue_script=")), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --debug logs --epilogue script path", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_ep_" });
+  const script = path.join(tmp, "e.R");
+  fs.writeFileSync(script, "1\n");
+  try {
+    const { logged } = parse_clean_log([
+      "--debug",
+      "--no-config",
+      "--expr=1",
+      `--epilogue=${script}`,
+    ]);
+    assertEquals(logged.some((l) => l.includes("r_epilogue_script=")), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --debug logs --timeout value", () => {
+  const { logged } = parse_clean_log([
+    "--debug",
+    "--no-config",
+    "--timeout=5",
+    "--expr=1",
+  ]);
+  assertEquals(logged.some((l) => l.includes("timeout=5")), true);
+});
+
+Deno.test("parse_args: --debug logs r_script when positional .R file given", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_rs_" });
+  const script = path.join(tmp, "main.R");
+  fs.writeFileSync(script, "1\n");
+  try {
+    const { logged } = parse_clean_log(["--debug", "--no-config", script]);
+    assertEquals(logged.some((l) => l.includes("r_script=")), true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --debug logs 'Ignoring r-libs-user' without --persistent", () => {
+  const tmp = Deno.makeTempDirSync({ prefix: "rw_rlibs_" });
+  try {
+    const { logged } = parse_clean_log([
+      "--debug",
+      "--no-config",
+      `--r-libs-user=${tmp}`,
+      "--expr=1",
+    ]);
+    assertEquals(
+      logged.some((l) => l.includes("Ignoring r-libs-user")),
+      true,
+    );
+  } finally {
+    fs.rmSync(tmp, { recursive: true });
+  }
+});
+
+Deno.test("parse_args: --debug logs 'Using default R shims'", () => {
+  const { logged } = parse_clean_log(["--debug", "--no-config", "--expr=1"]);
+  assertEquals(logged.some((l) => l.includes("Using default R shims")), true);
 });

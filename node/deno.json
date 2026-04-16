@@ -7,9 +7,12 @@
   },
   "nodeModulesDir": "auto",
   "tasks": {
-    "test": "deno test --allow-read --allow-write --allow-env --allow-sys --allow-run 'tests/*.js' 'tests/deno/*.js'",
-    "deno-escape-tests": "deno test --allow-read --allow-write --allow-env --allow-sys --allow-run tests/deno/escapes_test.js",
-    "deno-examples-tests": "deno test --allow-read --allow-write --allow-env --allow-sys --allow-run tests/deno/examples_test.js"
+    "check": "deno test --allow-all",
+      "cov": "rm -rf cov_profile && deno test --allow-all --coverage=cov_profile && deno coverage cov_profile"
+  },
+  "test": {
+    "include": ["tests/"],
+    "exclude": ["tests/node/"]
   },
   "fmt": {
     "useTabs": false,
