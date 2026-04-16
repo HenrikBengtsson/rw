@@ -1,0 +1,81 @@
+name: Deno
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - "node/**"
+      - ".github/workflows/deno.yml"
+  pull_request:
+    paths:
+      - "node/**"
+      - ".github/workflows/deno.yml"
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Unit tests: parse_args(), rwconfig helpers, rw_session utilities.
+  # No R evaluation — runs in a few seconds.
+  # -------------------------------------------------------------------------
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: node
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Cache npm packages
+        id: cache-npm
+        uses: actions/cache@v4
+        with:
+          path: node/node_modules
+          key: npm-${{ hashFiles('node/package.json', 'node/package-lock.json') }}
+
+      - name: Install npm packages
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Run unit tests
+        run: |
+          deno test --allow-read --allow-write --allow-env --allow-sys \
+            tests/cli_test.js tests/rw_session_test.js
+
+  # -------------------------------------------------------------------------
+  # Integration tests: spawn rw subprocesses that start webR and evaluate R.
+  # Each test takes 10–30 s; the full suite runs in roughly 10–20 min.
+  # -------------------------------------------------------------------------
+  integration:
+    name: Integration tests (Deno)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: node
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Cache npm packages
+        id: cache-npm
+        uses: actions/cache@v4
+        with:
+          path: node/node_modules
+          key: npm-${{ hashFiles('node/package.json', 'node/package-lock.json') }}
+
+      - name: Install npm packages
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Run integration tests
+        run: |
+          deno test --allow-all --config deno.json tests/deno/
+        timeout-minutes: 30
