@@ -54,7 +54,7 @@ jobs:
   # Integration tests: spawn rw subprocesses that start webR and evaluate R.
   # Each test takes 10–30 s; the full suite runs in roughly 10–20 min.
   # -------------------------------------------------------------------------
-  integration:
+  integration-deno:
     name: Integration tests (Deno)
     runs-on: ubuntu-latest
     defaults:
@@ -83,7 +83,41 @@ jobs:
         if: steps.cache-npm.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Run integration tests
+      - name: Run integration tests (Deno)
         run: |
           deno test --allow-all --config deno.json tests/deno/
+        timeout-minutes: 30
+
+  integration-node:
+    name: Integration tests (Node)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: node
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Cache npm packages
+        id: cache-npm
+        uses: actions/cache@v4
+        with:
+          path: node/node_modules
+          key: npm-${{ hashFiles('node/package.json', 'node/package-lock.json') }}
+
+      - name: Install npm packages
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Run integration tests (Node)
+        run: |
+          node --test tests/node/
         timeout-minutes: 30
