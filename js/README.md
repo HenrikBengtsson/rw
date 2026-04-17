@@ -8,59 +8,107 @@ to NPM that depends on it._
 
 ## TL;DR
 
-The \`rw\` tool is an Rscript-like command-line-interface (CLI) for running
-R code in a variety of environments (runtimes), including **[webR]**
-via [Deno] (for high isolation) or [Node.js] (for partial isolation).
+The `rw` tool is an Rscript-like command-line-interface (CLI) for running
+R code in a variety of environments (runtimes), with two main purposes:
 
-```sh
-rw --prologue=trusted.R untrusted.R
-```
+1. **Local webR Development:** Simplify running R code in **[webR]**
+   locally, including building and testing R packages for webR
+   compliance (via **[Node.js]** or **[Deno]**), e.g. `rw main.R`.
 
-This is useful for evaluating arbitrary, potentially untrusted R
-code in a secure manner, or for testing R code and packages in **webR**
-without a browser.
+2. **Secure Sandboxing:** Run potentially untrusted R code securely in
+   an isolated, **sandboxed** environment (via **[Deno]**), e.g. `rw
+   --prologue=trusted.R untrusted.R`.
 
-## Run without Installation
-
-### Using Node.js
-
-```sh
-npx @henrikbengtsson/rw --expr="sum(1:100)"
-```
-
-### Using Deno
-
-```sh
-deno run --quiet --allow-all npm:@henrikbengtsson/rw --expr='sum(1:100)'
-```
 
 ## Installation
 
-### Node.js (npm)
+The `rw` tool supports running **webR** via JavaScript runtimes
+**Node.js** (`--runtime="node:webr"`) and **Deno**
+(`--runtime="deno:webr"`), but it is only the latter that provides
+secure sandboxing.
 
-```sh
-npm install --global @henrikbengtsson/rw
-```
+### Recommended (Deno)
 
-The `rw` executable is installed to the `bin/` subfolder under `npm
-config get prefix`. Prepend that to your `PATH`, e.g. `export
-PATH=$(npm config get prefix)/bin:$PATH`.
-
-### Deno
+If you already have **Deno** installed (try `deno --version`), we
+recommend to install `rw` that way:
 
 ```sh
 deno install --global --allow-all npm:@henrikbengtsson/rw
 ```
 
 The `rw` executable is installed to `~/.deno/bin/`. Prepend that to
-your `PATH`, e.g. `export PATH=~/.deno/bin:$PATH`.
+your `PATH`, e.g. add `export PATH=~/.deno/bin:$PATH` to the end of
+your `~/.bashrc` file.
 
-To install the development version, use:
+### Alternative (Node.js)
+
+If you don't have, or don't want to install, Deno, but have
+**Node.js** installed (try `node --version`), install `rw` as:
 
 ```sh
-deno install --global --name rw-devel --allow-all \
-  https://raw.githubusercontent.com/futureverse/rw/refs/heads/develop/js/deno.json
+npm install --global @henrikbengtsson/rw
 ```
+
+The `rw` executable is installed to the `bin/` subfolder under `npm
+config get prefix`. Prepend that to your `PATH`, e.g. add `export
+PATH=$(npm config get prefix)/bin:$PATH` to the end of your
+`~/.bashrc` file.
+
+**Important 1**: When using `rw` without Deno, you have to specify
+command-line option `--runtime="node:webr"` in each `rw` call.
+
+**Important 2**: The Node.js runtime does **not** provide secure
+sandboxing. It should only be used with trusted code.
+
+
+## Getting started ("Hello world")
+
+First, make sure you have the `rw` tool on your search path - see
+above installation on setting up `PATH` - it'll make your life
+easier. To verify it works, open a terminal and call:
+
+```bash
+rw --version
+```
+
+It will output the version of the install **rw** tool. When that
+works, verify that the following works:
+
+```bash
+$ rw --expr="sum(1:100)"
+[1] 5050
+```
+
+
+## Local webR Development
+
+The `rw` tool simplifies running R code in **[webR]** locally without
+a browser. This is useful for building, installing, and testing R code
+and packages for webR compliance, especially in CI/CD pipelines.
+
+```bash
+$ rw --runtime="node:webr" \
+     --expr='install.packages("praise")' \
+     --expr='message(praise::praise())'
+Downloading webR package: praise
+You are kickass!
+```
+
+## Secure Sandboxing
+
+`rw` leverages the security features of **[Deno]** to provide a robust
+**sandbox** for R code. This is the recommended way to run potentially
+untrusted R code that might attempt to access your local files, your
+secrets, use your internet connection, impersonate you, and so on.
+
+```sh
+rw --runtime="deno:webr" \
+   --prologue=trusted.R \
+   untrusted.R
+```
+
+If left out, the default is `--runtime="deno:webr"`.
+
 
 ## Command-line Interface
 
@@ -176,7 +224,7 @@ Examples:
   rw build --docker path/to/mypkg
 
 Version: 0.0.300
-JS Runtime: node 24.12.0
+JS Runtime: deno 2.7.12
 webR: 0.5.8
 License: MIT
 Author: Henrik Bengtsson
