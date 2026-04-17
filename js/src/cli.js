@@ -241,8 +241,7 @@ async function deno_spawn_worker(worker_path, spec) {
   const read_paths = deno_read_paths(spec);
   const write_paths = deno_write_paths(spec);
   const allow_net = [...(spec.options?.allow_net || [])];
-  const needs_net = (spec.task === "run" && !!spec.options?.r_libs_user &&
-    spec.options?.persistent) || allow_net.length > 0;
+  const needs_net = (spec.task === "install") || allow_net.length > 0;
 
   if (needs_net && allow_net.length === 0) {
     allow_net.push(""); // empty string represents "allow all"
@@ -382,7 +381,7 @@ Options (runtime):
                                 (default: bastion in ./.rwconfig,
                                 or './bastion/' if it exists)
   --allow-net[=host[,...]]      Allow network access (Deno runtime only)
-                                (default: none, unless --persistent is set)
+                                (default: none, unless 'install' is used)
   --allow-run[=bin[,...]]       Allow running subprocesses (Deno runtime only)
   --prologue=[R script]         R script evaluated before main R code
   --epilogue=[R script]         R script evaluated after main R code
@@ -1180,7 +1179,7 @@ async function main() {
     let exit_code;
     try {
       exit_code = await spawn_worker(options.runtime, {
-        task: "run",
+        task: "install",
         options: make_run_spec(options),
       });
     } catch (e) {
@@ -1219,7 +1218,7 @@ async function main() {
     let exit_code;
     try {
       exit_code = await spawn_worker(options.runtime, {
-        task: "run",
+        task: "uninstall",
         options: make_run_spec(options),
       });
     } catch (e) {

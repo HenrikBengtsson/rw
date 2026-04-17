@@ -51,7 +51,7 @@ async function main() {
   }
   const spec = JSON.parse(Buffer.concat(chunks).toString("utf8"));
 
-  if (spec.task === "run") {
+  if (spec.task === "run" || spec.task === "install" || spec.task === "uninstall") {
     await run(spec.options);
   } else if (spec.task === "env") {
     if (spec.field === "webr-version") {
