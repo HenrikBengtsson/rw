@@ -633,7 +633,7 @@ Deno.test("parse_args: --r-libs-user with --persistent sets r_libs_user", () => 
   }
 });
 
-Deno.test("parse_args: --r-libs-user without --persistent is null", () => {
+Deno.test("parse_args: --r-libs-user without --persistent is NOT null", () => {
   const tmp = Deno.makeTempDirSync({ prefix: "rw_rlibs_" });
   try {
     const { options } = parse_clean([
@@ -641,7 +641,7 @@ Deno.test("parse_args: --r-libs-user without --persistent is null", () => {
       `--r-libs-user=${tmp}`,
       "--expr=1",
     ]);
-    assertEquals(options.r_libs_user, null);
+    assertEquals(options.r_libs_user, tmp);
   } finally {
     fs.rmSync(tmp, { recursive: true });
   }
@@ -939,7 +939,7 @@ Deno.test("parse_args: --debug logs r_script when positional .R file given", () 
   }
 });
 
-Deno.test("parse_args: --debug logs 'Ignoring r-libs-user' without --persistent", () => {
+Deno.test("parse_args: --debug logs 'Allowing r-libs-user' without --persistent", () => {
   const tmp = Deno.makeTempDirSync({ prefix: "rw_rlibs_" });
   try {
     const { logged } = parse_clean_log([
@@ -949,7 +949,7 @@ Deno.test("parse_args: --debug logs 'Ignoring r-libs-user' without --persistent"
       "--expr=1",
     ]);
     assertEquals(
-      logged.some((l) => l.includes("Ignoring r-libs-user")),
+      logged.some((l) => l.includes("Allowing r-libs-user")),
       true,
     );
   } finally {

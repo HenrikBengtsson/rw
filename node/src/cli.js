@@ -210,7 +210,9 @@ function deno_write_paths(spec) {
   // even for basic R evaluation (e.g. compiled WASM module caches).
   // /dev is needed by webR's Emscripten runtime for stdio setup (/dev/stdin etc.)
   const paths = [__pkgdir, "/dev"];
-  if (spec.task === "run" && spec.options.r_libs_user) {
+  if (
+    spec.task === "run" && spec.options.r_libs_user && spec.options.persistent
+  ) {
     paths.push(spec.options.r_libs_user);
     paths.push("/tmp"); // webR writes temp files during package download/extraction
   }
@@ -228,7 +230,8 @@ function deno_write_paths(spec) {
 async function deno_spawn_worker(worker_path, spec) {
   const read_paths = deno_read_paths(spec);
   const write_paths = deno_write_paths(spec);
-  const needs_net = spec.task === "run" && !!spec.options?.r_libs_user;
+  const needs_net = spec.task === "run" && !!spec.options?.r_libs_user &&
+    spec.options?.persistent;
 
   const args = [
     "run",
@@ -287,6 +290,7 @@ function make_run_spec(options) {
     verbose: options.verbose,
     webr_args: options.webr_args,
     r_libs_user: options.r_libs_user,
+    persistent: options.persistent,
     binds: options.binds,
     bastion_host: options.bastion_host,
     shims: options.shims,
@@ -336,7 +340,7 @@ Options (runtime):
                                   (default: runtime-opt in ./.rwconfig,
                                   or 'shims=install.packages')
   --r-libs-user=[host-dir]      Bind R user library to host directory
-                                (only active with --persistent;
+                                (read-only unless --persistent is set;
                                 default: r-libs-user in ./.rwconfig)
   --bind=[host-dir]:[rwasm-dir] Bind host directory as a webR directory
                                 (may be specified multiple times)
@@ -698,12 +702,9 @@ export function parse_args(args) {
     }
   }
 
-  // r-libs-user is only honoured when --persistent is set
-  if (!options.persistent) {
-    if (options.r_libs_user !== null && options.debug) {
-      console.log("Ignoring r-libs-user (requires --persistent)");
-    }
-    options.r_libs_user = null;
+  // r-libs-user is allowed without --persistent, but it will be read-only
+  if (!options.persistent && options.r_libs_user !== null && options.debug) {
+    console.log("Allowing r-libs-user without --persistent (read-only)");
   }
 
   // Bastion fallback

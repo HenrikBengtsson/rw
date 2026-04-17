@@ -407,9 +407,15 @@ export class RwSession {
   /**
    * Set the R library paths
    * @param {string} lib_path - Path to add to .libPaths()
+   * @param {Object} [options]
+   * @param {boolean} [options.append] - If true, append to .libPaths(); otherwise prepend
    */
-  async set_lib_paths(lib_path) {
-    await this.webR.evalRVoid(`.libPaths("${lib_path}")`);
+  async set_lib_paths(lib_path, options = {}) {
+    if (options.append) {
+      await this.webR.evalRVoid(`.libPaths(c(.libPaths(), "${lib_path}"))`);
+    } else {
+      await this.webR.evalRVoid(`.libPaths("${lib_path}")`);
+    }
   }
 
   /**
@@ -436,6 +442,7 @@ export class RwSession {
  * @property {boolean} debug - Enable debug output
  * @property {string[]} webr_args - Arguments to pass to webR/R
  * @property {string} r_libs_user - Host path for R library
+ * @property {boolean} persistent - Allow side effects (writable r_libs_user)
  * @property {Array<{host: string, webr: string}>} binds - Directory bindings
  * @property {string} bastion_host - Host path for bastion directory
  * @property {string[]} shims - Shims to install
@@ -456,6 +463,7 @@ export async function run(options = {}) {
     verbose = false,
     webr_args = [],
     r_libs_user = null,
+    persistent = false,
     binds = [],
     bastion_host = null,
     shims = ["install.packages"],
@@ -474,11 +482,13 @@ export async function run(options = {}) {
     const r_libs_webr = "/host/R_LIBS_USER";
     if (verbose) {
       console.error(
-        `Binding host R library '${normalized_libs}' to '${r_libs_webr}' in R`,
+        `Binding host R library '${normalized_libs}' to '${r_libs_webr}' in R (${
+          persistent ? "writable" : "read-only"
+        })`,
       );
     }
     await session.mount(normalized_libs, r_libs_webr);
-    await session.set_lib_paths(r_libs_webr);
+    await session.set_lib_paths(r_libs_webr, { append: !persistent });
   }
 
   // Bind host directories

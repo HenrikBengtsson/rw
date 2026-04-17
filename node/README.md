@@ -107,7 +107,7 @@ Options (runtime):
                                   (default: runtime-opt in ./.rwconfig,
                                   or 'shims=install.packages')
   --r-libs-user=[host-dir]      Bind R user library to host directory
-                                (only active with --persistent;
+                                (read-only unless --persistent is set;
                                 default: r-libs-user in ./.rwconfig)
   --bind=[host-dir]:[rwasm-dir] Bind host directory as a webR directory
                                 (may be specified multiple times)
