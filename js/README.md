@@ -15,7 +15,7 @@ R code in a variety of environments (runtimes), with two main purposes:
    locally, including building and testing R packages for webR
    compliance (via **[Node.js]** or **[Deno]**), e.g. `rw main.R`.
 
-2. **Secure Sandboxing:** Run potentially untrusted R code securely in
+2. **Sandboxed Evaluation:** Run potentially untrusted R code in
    an isolated, **sandboxed** environment (via **[Deno]**), e.g. `rw
    --prologue=trusted.R untrusted.R`.
 
@@ -24,8 +24,8 @@ R code in a variety of environments (runtimes), with two main purposes:
 
 The `rw` tool supports running **webR** via JavaScript runtimes
 **Node.js** (`--runtime="node:webr"`) and **Deno**
-(`--runtime="deno:webr"`), but it is only the latter that provides
-secure sandboxing.
+(`--runtime="deno:webr"`), but it is only the latter that provides a
+sandboxed environment.
 
 ### Recommended (Deno)
 
@@ -57,8 +57,8 @@ PATH=$(npm config get prefix)/bin:$PATH` to the end of your
 **Important 1**: When using `rw` without Deno, you have to specify
 command-line option `--runtime="node:webr"` in each `rw` call.
 
-**Important 2**: The Node.js runtime does **not** provide secure
-sandboxing. It should only be used with trusted code.
+**Important 2**: The Node.js runtime does **not** provide a
+sandboxed environment. It should only be used with trusted code.
 
 
 ## Getting started ("Hello world")
@@ -103,9 +103,9 @@ don't have to re-install packages each time. This can be done by using
 `rw --persistent --r-libs-user=<path> ...`.
 
 
-## Secure Sandboxing
+## Sandboxed Evaluation
 
-`rw` leverages the [security
+`rw` leverages the [sandboxing and isolation
 features](https://docs.deno.com/runtime/fundamentals/security/) of
 **[Deno]** to provide a robust **sandbox** for R code. This is the
 recommended way to run potentially untrusted R code that might attempt
