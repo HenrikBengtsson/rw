@@ -21,7 +21,7 @@ useful for making sure R code and R packages work in **webR** without
 having to go the extra mile to upload packages online and then testing
 it in the web browser at <https://webr.sh/>.
 
-See [node/README.md](./node/README.md) for further details.
+See [js/README.md](./js/README.md) for further details.
 
 See [r/README.md](./r/README.md) for an R package API.
 

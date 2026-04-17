@@ -59,7 +59,7 @@ To install the development version, use:
 
 ```sh
 deno install --global --name rw-devel --allow-all \
-  https://raw.githubusercontent.com/futureverse/rw/refs/heads/develop/node/deno.json
+  https://raw.githubusercontent.com/futureverse/rw/refs/heads/develop/js/deno.json
 ```
 
 ## Command-line Interface
