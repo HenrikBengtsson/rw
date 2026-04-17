@@ -109,7 +109,8 @@ Options (runtime):
   --r-libs-user=[host-dir]      Bind R user library to host directory
                                 (read-only unless --persistent is set;
                                 default: r-libs-user in ./.rwconfig)
-  --bind=[host-dir]:[rwasm-dir] Bind host directory as a webR directory
+  --bind=[host-dir]:[rwasm-dir][:mode] Bind host directory as a webR directory
+                                (mode: 'ro' (read-only) or 'rw' (default))
                                 (may be specified multiple times)
   --bastion=[host-dir]          Bind host directory available to prologue and
                                 epilogue code at '/host/bastion', but not

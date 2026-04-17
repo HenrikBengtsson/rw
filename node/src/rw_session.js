@@ -246,11 +246,14 @@ export class RwSession {
    * Mount a host directory to the webR filesystem
    * @param {string} host_path - Path on the host
    * @param {string} webr_path - Path in webR filesystem
+   * @param {boolean} [readonly=false] - Whether the mount should be read-only
    */
-  async mount(host_path, webr_path) {
+  async mount(host_path, webr_path, readonly = false) {
     if (this.debug) {
       console.log(
-        `Mounting '${host_path}' on host to '${webr_path}' in R WebAssembly`,
+        `Mounting '${host_path}' on host to '${webr_path}' in R WebAssembly${
+          readonly ? " (read-only)" : ""
+        }`,
       );
     }
     await this.mkdirs(webr_path);
@@ -501,10 +504,12 @@ export async function run(options = {}) {
     }
     if (verbose) {
       console.error(
-        `Binding host folder '${bind.host}' to '${webr_path}' in R`,
+        `Binding host folder '${bind.host}' to '${webr_path}' in R${
+          bind.readonly ? " (read-only)" : ""
+        }`,
       );
     }
-    await session.mount(bind.host, webr_path);
+    await session.mount(bind.host, webr_path, bind.readonly);
   }
 
   // Install shims

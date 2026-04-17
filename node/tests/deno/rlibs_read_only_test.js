@@ -98,3 +98,58 @@ Deno.test({
     }
   },
 });
+
+Deno.test({
+  name: "--bind with :ro is read-only",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  timeout: 120_000,
+  async fn() {
+    const tmp = Deno.makeTempDirSync({ prefix: "rw_bind_ro_" });
+    try {
+      const { code, stderr } = await rw([
+        "--no-config",
+        `--bind=${tmp}:/data:ro`,
+        "--expr=cat('test', file='/data/test.txt')",
+      ]);
+      
+      assertEquals(code, 1, `Expected exit code 1, got ${code}\nstderr: ${stderr}`);
+      assert(
+        stderr.includes('Requires write access to') || stderr.includes('PermissionDenied'),
+        `Expected permission error in stderr, got:\n${stderr}`
+      );
+      
+      const exists = fs.existsSync(path.join(tmp, "test.txt"));
+      assert(!exists, "File should NOT have been created in read-only bind");
+      
+    } finally {
+      fs.rmSync(tmp, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: "--bind with :rw is writable",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  timeout: 120_000,
+  async fn() {
+    const tmp = Deno.makeTempDirSync({ prefix: "rw_bind_rw_" });
+    try {
+      const { code, stderr } = await rw([
+        "--no-config",
+        `--bind=${tmp}:/data:rw`,
+        "--expr=cat('test', file='/data/test.txt')",
+      ]);
+      
+      assertEquals(code, 0, `Expected exit code 0, got ${code}\nstderr: ${stderr}`);
+      
+      const exists = fs.existsSync(path.join(tmp, "test.txt"));
+      assert(exists, "File should have been created in writable bind");
+      assertEquals(fs.readFileSync(path.join(tmp, "test.txt"), "utf8"), "test");
+      
+    } finally {
+      fs.rmSync(tmp, { recursive: true });
+    }
+  },
+});

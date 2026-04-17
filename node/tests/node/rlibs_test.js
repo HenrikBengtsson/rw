@@ -90,4 +90,41 @@ describe("--r-libs-user under Node.js", () => {
       fs.rmSync(tmp, { recursive: true });
     }
   });
+
+  it("accepts :ro bind but does NOT (yet) enforce it in Node.js", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_bind_node_ro_"));
+    try {
+      const { code, stderr } = rw([
+        "--no-config",
+        `--bind=${tmp}:/data:ro`,
+        "--expr=cat('test', file='/data/test.txt')",
+      ]);
+      
+      assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
+      
+      // Node.js doesn't enforce read-only yet, so this file WILL be created.
+      // This test serves as documentation of the current limitation.
+      const exists = fs.existsSync(path.join(tmp, "test.txt"));
+      assert.ok(exists, "File was created despite :ro (Node.js limitation)");
+    } finally {
+      fs.rmSync(tmp, { recursive: true });
+    }
+  });
+
+  it("accepts :rw bind in Node.js", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_bind_node_rw_"));
+    try {
+      const { code, stderr } = rw([
+        "--no-config",
+        `--bind=${tmp}:/data:rw`,
+        "--expr=cat('test', file='/data/test.txt')",
+      ]);
+      
+      assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
+      const exists = fs.existsSync(path.join(tmp, "test.txt"));
+      assert.ok(exists, "File should have been created in writable bind");
+    } finally {
+      fs.rmSync(tmp, { recursive: true });
+    }
+  });
 });

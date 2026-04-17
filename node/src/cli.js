@@ -210,11 +210,15 @@ function deno_write_paths(spec) {
   // even for basic R evaluation (e.g. compiled WASM module caches).
   // /dev is needed by webR's Emscripten runtime for stdio setup (/dev/stdin etc.)
   const paths = [__pkgdir, "/dev"];
-  if (
-    spec.task === "run" && spec.options.r_libs_user && spec.options.persistent
-  ) {
-    paths.push(spec.options.r_libs_user);
-    paths.push("/tmp"); // webR writes temp files during package download/extraction
+  if (spec.task === "run") {
+    const o = spec.options;
+    if (o.r_libs_user && o.persistent) {
+      paths.push(o.r_libs_user);
+      paths.push("/tmp"); // webR writes temp files during package download/extraction
+    }
+    for (const bind of (o.binds || [])) {
+      if (!bind.readonly) paths.push(bind.host);
+    }
   }
   return paths;
 }
@@ -342,7 +346,8 @@ Options (runtime):
   --r-libs-user=[host-dir]      Bind R user library to host directory
                                 (read-only unless --persistent is set;
                                 default: r-libs-user in ./.rwconfig)
-  --bind=[host-dir]:[rwasm-dir] Bind host directory as a webR directory
+  --bind=[host-dir]:[rwasm-dir][:mode] Bind host directory as a webR directory
+                                (mode: 'ro' (read-only) or 'rw' (default))
                                 (may be specified multiple times)
   --bastion=[host-dir]          Bind host directory available to prologue and
                                 epilogue code at '/host/bastion', but not
@@ -533,9 +538,14 @@ export function parse_args(args) {
     } else if (arg.startsWith(prefix = "--bind=")) {
       value = arg.slice(prefix.length);
       const parts = value.split(":");
-      if (parts.length === 1) parts.push(parts[0]);
-      options.binds.push({ host: parts[0], webr: parts[1] });
-      if (options.debug) console.log(`Add bind=${value}`);
+      const host = parts[0];
+      const webr = parts[1] || parts[0];
+      const mode = parts[2] || "rw";
+      if (mode !== "ro" && mode !== "rw") {
+        throw new Error(`Invalid --bind mode: ${mode}`);
+      }
+      options.binds.push({ host, webr, readonly: mode === "ro" });
+      if (options.debug) console.log(`Add bind=${host}:${webr}:${mode}`);
     } else if (arg.startsWith(prefix = "--bastion=")) {
       value = arg.slice(prefix.length);
       options.bastion_host = value;
