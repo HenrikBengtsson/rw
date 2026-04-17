@@ -332,7 +332,7 @@ Options (general):
 Options (runtime):
   --runtime=[host]:[engine]     Runtime environment (default: 'deno:webr')
   --runtime-opt=[key]=[value]   Runtime-specific option (repeatable)
-                                  shims=[shim][,[shim]] — comma-separated shims
+                                  shims=[shim][,[shim]] - comma-separated shims
                                   (default: runtime-opt in ./.rwconfig,
                                   or 'shims=install.packages')
   --r-libs-user=[host-dir]      Bind R user library to host directory

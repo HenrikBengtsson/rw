@@ -6,7 +6,7 @@ to NPM that depends on it._
 
 ## TL;DR
 
-The `rw` tool is an Rscript-like command-line-interface (CLI) for running
+The \`rw\` tool is an Rscript-like command-line-interface (CLI) for running
 R code in a variety of environments (runtimes), including **[webR]**
 via [Deno] (for high isolation) or [Node.js] (for partial isolation).
 
@@ -101,7 +101,7 @@ Options (general):
 Options (runtime):
   --runtime=[host]:[engine]     Runtime environment (default: 'deno:webr')
   --runtime-opt=[key]=[value]   Runtime-specific option (repeatable)
-                                  shims=[shim][,[shim]] — comma-separated shims
+                                  shims=[shim][,[shim]] - comma-separated shims
                                   (default: runtime-opt in ./.rwconfig,
                                   or 'shims=install.packages')
   --r-libs-user=[host-dir]      Bind R user library to host directory

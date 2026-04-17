@@ -133,7 +133,10 @@ Always add a reproduction test case when fixing a bug or adding a new feature.
 
 ## 6. Markdown Standards
 
-When editing documentation (`*.md`), use `markdownlint` to ensure consistency:
+- **README.md**: Never edit `README.md` directly. Always edit `_README.md.tmpl`
+  and then run `make README.md` to regenerate it.
+- **Consistency**: When editing documentation (`*.md`), use `markdownlint` to
+  ensure consistency:
 
 ```bash
 markdownlint --fix <file.md>
