@@ -47,7 +47,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          deno test --allow-read --allow-write --allow-env --allow-sys \
+          deno test --allow-all \
             tests/cli_test.js tests/rw_session_test.js
 
   # -------------------------------------------------------------------------
