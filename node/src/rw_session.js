@@ -448,6 +448,7 @@ export class RwSession {
  * @property {boolean} persistent - Allow side effects (writable r_libs_user)
  * @property {Array<{host: string, webr: string}>} binds - Directory bindings
  * @property {string} bastion_host - Host path for bastion directory
+ * @property {boolean} bastion_readonly - Whether the bastion should be read-only
  * @property {string[]} shims - Shims to install
  * @property {string[]} prologue_exprs - R expressions to run before main code
  * @property {string[]} exprs - Main R expressions to run
@@ -469,6 +470,7 @@ export async function run(options = {}) {
     persistent = false,
     binds = [],
     bastion_host = null,
+    bastion_readonly = false,
     shims = ["install.packages"],
     prologue_exprs = [],
     exprs = [],
@@ -522,7 +524,9 @@ export async function run(options = {}) {
 
   if (bastion_host && verbose) {
     console.error(
-      `Binding bastion folder '${bastion_host}' to '${r_bastion_webr}' in R`,
+      `Binding bastion folder '${bastion_host}' to '${r_bastion_webr}' in R${
+        bastion_readonly ? " (read-only)" : ""
+      }`,
     );
   }
 
@@ -532,7 +536,7 @@ export async function run(options = {}) {
     if (verbose) console.error("Evaluating prologue R code");
 
     if (bastion_host) {
-      await session.mount(bastion_host, r_bastion_webr);
+      await session.mount(bastion_host, r_bastion_webr, bastion_readonly);
     }
 
     await session.eval_code(prologue_exprs, { timeout });
@@ -558,7 +562,7 @@ export async function run(options = {}) {
     if (verbose) console.error("Evaluating epilogue R code");
 
     if (bastion_host) {
-      await session.mount(bastion_host, r_bastion_webr);
+      await session.mount(bastion_host, r_bastion_webr, bastion_readonly);
     }
 
     await session.eval_code(epilogue_exprs, { timeout });

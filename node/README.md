@@ -112,9 +112,10 @@ Options (runtime):
   --bind=[host-dir]:[rwasm-dir][:mode] Bind host directory as a webR directory
                                 (mode: 'ro' (read-only) or 'rw' (default))
                                 (may be specified multiple times)
-  --bastion=[host-dir]          Bind host directory available to prologue and
+  --bastion=[host-dir][:mode]  Bind host directory available to prologue and
                                 epilogue code at '/host/bastion', but not
-                                the main code (default: bastion in ./.rwconfig,
+                                the main code (mode: 'ro' (read-only) or 'rw')
+                                (default: bastion in ./.rwconfig,
                                 or './bastion/' if it exists)
   --prologue=[R script]         R script evaluated before main R code
   --epilogue=[R script]         R script evaluated after main R code

@@ -153,3 +153,61 @@ Deno.test({
     }
   },
 });
+
+Deno.test({
+  name: "--bastion with :ro is read-only",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  timeout: 120_000,
+  async fn() {
+    const tmp = Deno.makeTempDirSync({ prefix: "rw_bastion_ro_" });
+    try {
+      // Epilogue attempt to write to read-only bastion
+      const { code, stderr } = await rw([
+        "--no-config",
+        `--bastion=${tmp}:ro`,
+        "--expr=1",
+        "--epilogue-expr=cat('test', file='/host/bastion/test.txt')",
+      ]);
+      
+      assertEquals(code, 1, `Expected exit code 1, got ${code}\nstderr: ${stderr}`);
+      assert(
+        stderr.includes('Requires write access to') || stderr.includes('PermissionDenied'),
+        `Expected permission error in stderr, got:\n${stderr}`
+      );
+      
+      const exists = fs.existsSync(path.join(tmp, "test.txt"));
+      assert(!exists, "File should NOT have been created in read-only bastion");
+      
+    } finally {
+      fs.rmSync(tmp, { recursive: true });
+    }
+  },
+});
+
+Deno.test({
+  name: "--bastion (default) is writable",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  timeout: 120_000,
+  async fn() {
+    const tmp = Deno.makeTempDirSync({ prefix: "rw_bastion_rw_" });
+    try {
+      const { code, stderr } = await rw([
+        "--no-config",
+        `--bastion=${tmp}`,
+        "--expr=1",
+        "--epilogue-expr=cat('test', file='/host/bastion/test.txt')",
+      ]);
+      
+      assertEquals(code, 0, `Expected exit code 0, got ${code}\nstderr: ${stderr}`);
+      
+      const exists = fs.existsSync(path.join(tmp, "test.txt"));
+      assert(exists, "File should have been created in writable bastion");
+      assertEquals(fs.readFileSync(path.join(tmp, "test.txt"), "utf8"), "test");
+      
+    } finally {
+      fs.rmSync(tmp, { recursive: true });
+    }
+  },
+});

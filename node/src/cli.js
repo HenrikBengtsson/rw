@@ -216,6 +216,9 @@ function deno_write_paths(spec) {
       paths.push(o.r_libs_user);
       paths.push("/tmp"); // webR writes temp files during package download/extraction
     }
+    if (o.bastion_host && !o.bastion_readonly) {
+      paths.push(o.bastion_host);
+    }
     for (const bind of (o.binds || [])) {
       if (!bind.readonly) paths.push(bind.host);
     }
@@ -297,6 +300,7 @@ function make_run_spec(options) {
     persistent: options.persistent,
     binds: options.binds,
     bastion_host: options.bastion_host,
+    bastion_readonly: options.bastion_readonly,
     shims: options.shims,
     prologue_exprs: options.prologue_exprs,
     exprs: options.exprs,
@@ -349,9 +353,10 @@ Options (runtime):
   --bind=[host-dir]:[rwasm-dir][:mode] Bind host directory as a webR directory
                                 (mode: 'ro' (read-only) or 'rw' (default))
                                 (may be specified multiple times)
-  --bastion=[host-dir]          Bind host directory available to prologue and
+  --bastion=[host-dir][:mode]  Bind host directory available to prologue and
                                 epilogue code at '/host/bastion', but not
-                                the main code (default: bastion in ./.rwconfig,
+                                the main code (mode: 'ro' (read-only) or 'rw')
+                                (default: bastion in ./.rwconfig,
                                 or './bastion/' if it exists)
   --prologue=[R script]         R script evaluated before main R code
   --epilogue=[R script]         R script evaluated after main R code
@@ -438,6 +443,7 @@ export function parse_args(args) {
     r_libs_user: null,
     binds: [],
     bastion_host: null,
+    bastion_readonly: false,
     persistent: false,
     shims: [],
     prologue_exprs: [],
@@ -548,8 +554,14 @@ export function parse_args(args) {
       if (options.debug) console.log(`Add bind=${host}:${webr}:${mode}`);
     } else if (arg.startsWith(prefix = "--bastion=")) {
       value = arg.slice(prefix.length);
-      options.bastion_host = value;
-      if (options.debug) console.log(`bastion_host=${options.bastion_host}`);
+      const parts = value.split(":");
+      options.bastion_host = parts[0];
+      options.bastion_readonly = parts[1] === "ro";
+      if (options.debug) {
+        console.log(
+          `bastion_host=${options.bastion_host} (readonly=${options.bastion_readonly})`,
+        );
+      }
     } else if (arg.startsWith(prefix = "--prologue=")) {
       value = arg.slice(prefix.length);
       r_prologue_script = value;
