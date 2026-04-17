@@ -94,6 +94,15 @@ Downloading webR package: praise
 You are kickass!
 ```
 
+Note that the **webR** environment is _ephemeral_, which means that it
+has no memory across session. The default is that packages are only
+installed to this temporary environment to be used for the life time
+of the **webR** session (i.e. a single `rw` call). It is possible to
+install packages permanently on the host file system such that you
+don't have to re-install packages each time. This can be done by using
+`rw --persistent --r-libs-user=<path> ...`.
+
+
 ## Secure Sandboxing
 
 `rw` leverages the security features of **[Deno]** to provide a robust
