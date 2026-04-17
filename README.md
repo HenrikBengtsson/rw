@@ -7,9 +7,9 @@ _This is work in-progress - it only works partially. Please come back later._
 
 ## TL;DR
 
-The `rw` tools is an Rscript-like command-line-interface (CLI) tool
-for running R code in a sandboxed WebAssembly environment via Node.js
-and **[webR]**, e.g.
+The `rw` tool is an Rscript-like command-line-interface (CLI)
+for running R code in a sandboxed WebAssembly environment via **[webR]**
+using **[Deno]** (for high isolation) or **[Node.js]** (for partial isolation), e.g.
 
 ```sh
 $ rw --r-libs=~/R/webR --prologue=trusted.R untrusted.R
@@ -26,3 +26,5 @@ See [node/README.md](./node/README.md) for further details.
 See [r/README.md](./r/README.md) for an R package API.
 
 [webR]: https://github.com/r-wasm/webr/
+[Deno]: https://deno.com/
+[Node.js]: https://nodejs.org/en/
