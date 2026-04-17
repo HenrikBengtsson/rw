@@ -4,11 +4,11 @@ on:
   push:
     branches: [develop, main]
     paths:
-      - "node/**"
+      - "js/**"
       - ".github/workflows/check.yml"
   pull_request:
     paths:
-      - "node/**"
+      - "js/**"
       - ".github/workflows/check.yml"
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: node
+        working-directory: js
 
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +38,8 @@ jobs:
         id: cache-npm
         uses: actions/cache@v4
         with:
-          path: node/node_modules
-          key: npm-${{ hashFiles('node/package.json', 'node/package-lock.json') }}
+          path: js/node_modules
+          key: npm-${{ hashFiles('js/package.json', 'js/package-lock.json') }}
 
       - name: Install npm packages
         if: steps.cache-npm.outputs.cache-hit != 'true'
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: node
+        working-directory: js
 
     steps:
       - uses: actions/checkout@v4
@@ -76,8 +76,8 @@ jobs:
         id: cache-npm
         uses: actions/cache@v4
         with:
-          path: node/node_modules
-          key: npm-${{ hashFiles('node/package.json', 'node/package-lock.json') }}
+          path: js/node_modules
+          key: npm-${{ hashFiles('js/package.json', 'js/package-lock.json') }}
 
       - name: Install npm packages
         if: steps.cache-npm.outputs.cache-hit != 'true'
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: node
+        working-directory: js
 
     steps:
       - uses: actions/checkout@v4
@@ -110,8 +110,8 @@ jobs:
         id: cache-npm
         uses: actions/cache@v4
         with:
-          path: node/node_modules
-          key: npm-${{ hashFiles('node/package.json', 'node/package-lock.json') }}
+          path: js/node_modules
+          key: npm-${{ hashFiles('js/package.json', 'js/package-lock.json') }}
 
       - name: Install npm packages
         if: steps.cache-npm.outputs.cache-hit != 'true'
