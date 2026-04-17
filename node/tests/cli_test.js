@@ -496,17 +496,22 @@ Deno.test("validate_runtime: invalid format throws", () => {
   );
 });
 
-Deno.test("validate_runtime: unknown engine throws", () => {
+Deno.test("validate_runtime: 'host:rscript' is valid", () => {
+  // Should not throw (assuming Rscript is on PATH)
+  validate_runtime("host:rscript");
+});
+
+Deno.test("validate_runtime: unknown engine 'foo' throws", () => {
   assertThrows(
-    () => validate_runtime("deno:docker"),
+    () => validate_runtime("deno:foo"),
     Error,
     "Unknown runtime engine",
   );
 });
 
-Deno.test("validate_runtime: unknown host throws", () => {
+Deno.test("validate_runtime: unknown host 'foo' throws", () => {
   assertThrows(
-    () => validate_runtime("docker:webr"),
+    () => validate_runtime("foo:webr"),
     Error,
     "Unknown runtime host",
   );

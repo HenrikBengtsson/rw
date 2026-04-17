@@ -577,12 +577,11 @@ export async function get_r_version() {
 }
 
 /**
- * Get detailed R configuration info
- * @returns {Promise<void>} Prints configuration to stdout
+ * Get the R code for detailed R configuration info
+ * @param {string} field - Optional field to filter for
+ * @returns {string} R code
  */
-export async function get_r_info(field = null) {
-  const webR = new WebR({ RArgs: ["--vanilla"] });
-  await webR.init();
+export function get_r_info_code(field = null) {
   const code = [
     "lines <- c()",
     "values <- Sys.getenv()",
@@ -627,7 +626,7 @@ export async function get_r_info(field = null) {
     'lines <- c(lines, sprintf("lapack:%s=%s", names(values), values))',
     "values <- l10n_info()",
     'lines <- c(lines, sprintf("localization:%s=%s", names(values), values))',
-    'values <- strsplit(Sys.getenv("R_LIBS_USER"), split = ":", fixed = TRUE)[[1]]',
+    'values <- tryCatch(strsplit(Sys.getenv("R_LIBS_USER"), split = ":", fixed = TRUE)[[1]], error = function(e) character(0))',
     'values <- gsub(sprintf("^%s", normalizePath("~")), "~", values)',
     'lines <- c(lines, sprintf("rw_suggestions:%s=%s", names(values), values))',
     "lines <- sort(lines)",
@@ -650,5 +649,17 @@ export async function get_r_info(field = null) {
   } else {
     code.push("writeLines(lines)");
   }
+  return code.join("\n");
+}
+
+/**
+ * Get detailed R configuration info
+ * @returns {Promise<void>} Prints configuration to stdout
+ */
+export async function get_r_info(field = null) {
+  const webR = new WebR({ RArgs: ["--vanilla"] });
+  await webR.init();
+  const code = get_r_info_code(field);
   await webR.evalR(code);
 }
+

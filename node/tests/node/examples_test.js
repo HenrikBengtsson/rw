@@ -206,3 +206,41 @@ describe("rw --help examples", () => {
     );
   });
 });
+
+describe("host:rscript runtime", () => {
+  // rw --runtime=host:rscript --expr="1 + 2"
+  it('rw --runtime=host:rscript --expr="1 + 2"', () => {
+    const result = spawnSync(process.execPath, [CLI, "--no-config", "--runtime=host:rscript", "--expr=1 + 2"], {
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0);
+    assert.ok(result.stdout.includes("3"));
+  });
+
+  // rw --runtime=host:rscript env get r-version
+  it("rw --runtime=host:rscript env get r-version", () => {
+    const result = spawnSync(process.execPath, [CLI, "--no-config", "--runtime=host:rscript", "env", "get", "r-version"], {
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0);
+    assert.match(result.stdout.trim(), /^\d+\.\d+\.\d+$/);
+  });
+
+  // rw --runtime=host:rscript --expr="commandArgs(trailingOnly=TRUE)" hello world
+  it("rw --runtime=host:rscript trailing args", () => {
+    const result = spawnSync(process.execPath, [CLI, "--no-config", "--runtime=host:rscript", "--expr=commandArgs(trailingOnly=TRUE)", "hello", "world"], {
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0);
+    assert.ok(result.stdout.includes('"hello" "world"'));
+  });
+
+  // rw --runtime=host:rscript --timeout=1 --expr="Sys.sleep(5)"
+  it("rw --runtime=host:rscript timeout", () => {
+    const result = spawnSync(process.execPath, [CLI, "--no-config", "--runtime=host:rscript", "--timeout=0.5", "--expr=Sys.sleep(5)"], {
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 1);
+    assert.ok(result.stderr.includes("interrupt"));
+  });
+});

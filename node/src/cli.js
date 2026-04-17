@@ -7,6 +7,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   author,
+  get_r_info_code,
   license,
   normalize_path,
   read_code,
@@ -143,19 +144,30 @@ function validate_runtime(value) {
     throw new Error(`Invalid runtime format: '${value}'. Expected <host>:<engine>, e.g. deno:webr`);
   }
   const [host, engine] = parts;
-  if (engine !== "webr") {
-    throw new Error(`Unknown runtime engine: '${engine}'. Only 'webr' is supported.`);
+  if (engine !== "webr" && engine !== "rscript") {
+    throw new Error(`Unknown runtime engine: '${engine}'. Only 'webr' and 'rscript' are supported.`);
   }
-  if (host !== "deno" && host !== "node") {
-    throw new Error(`Unknown runtime host: '${host}'. Only 'deno' and 'node' are supported.`);
+  if (host !== "deno" && host !== "node" && host !== "host") {
+    throw new Error(`Unknown runtime host: '${host}'. Only 'deno', 'node' and 'host' are supported.`);
   }
 
   // Check if host executable is available
-  try {
-    const { status } = spawnSync(host, ["--version"], { stdio: "ignore" });
-    if (status !== 0) throw new Error();
-  } catch {
-    throw new Error(`Runtime host '${host}' not found on PATH. Please install it.`);
+  if (host === "host") {
+    if (engine === "rscript") {
+      try {
+        const { status } = spawnSync("Rscript", ["--version"], { stdio: "ignore" });
+        if (status !== 0) throw new Error();
+      } catch {
+        throw new Error(`Runtime engine 'rscript' not found on PATH. Please install R.`);
+      }
+    }
+  } else {
+    try {
+      const { status } = spawnSync(host, ["--version"], { stdio: "ignore" });
+      if (status !== 0) throw new Error();
+    } catch {
+      throw new Error(`Runtime host '${host}' not found on PATH. Please install it.`);
+    }
   }
 }
 
@@ -261,6 +273,87 @@ async function deno_spawn_worker(worker_path, spec) {
 }
 
 /**
+ * Spawn Rscript on the host directly.
+ * @param {Object} spec
+ * @returns {Promise<number>} Exit code
+ */
+async function host_spawn_rscript(spec) {
+  const options = spec.options || {};
+  const code = [];
+
+  // Handle r_libs_user
+  if (options.r_libs_user) {
+    code.push(`.libPaths(unique(c(${JSON.stringify(options.r_libs_user)}, .libPaths())))`);
+  }
+
+  if (spec.task === "run") {
+    let run_code = [
+      ...(options.prologue_exprs || []),
+      ...(options.exprs || []),
+      ...(options.epilogue_exprs || []),
+    ].join("\n");
+
+    if (options.timeout > 0) {
+      // Apply timeout wrapper: converts interrupt into a stop() call,
+      // matching the behavior in RwSession.eval_code()
+      run_code = `tryCatch({ ${run_code} }, interrupt = function(int) {
+        msg <- conditionMessage(int)
+        msg <- if (is.null(msg)) "" else sprintf(" (%s)", msg)
+        msg <- sprintf("R exiting, because of %s%s", class(int)[1], msg)
+        stop(msg)
+      })`;
+    }
+    code.push(run_code);
+  } else if (spec.task === "env") {
+    if (spec.field === "webr-version") {
+      console.log("n/a");
+      return 0;
+    } else if (spec.field === "r-version") {
+      code.push("cat(as.character(getRversion()))");
+    } else if (spec.field === "js-runtime") {
+      console.log("n/a (host:rscript)");
+      return 0;
+    } else {
+      code.push(get_r_info_code(spec.field));
+    }
+  }
+
+  const r_code = code.join("\n");
+  const args = ["-e", r_code];
+  if (options.webr_args && options.webr_args.length > 0) {
+    // Skip --args if it's the first element, as Rscript passes all
+    // subsequent arguments as trailing arguments anyway.
+    if (options.webr_args[0] === "--args") {
+      args.push(...options.webr_args.slice(1));
+    } else {
+      args.push(...options.webr_args);
+    }
+  }
+
+  if (options.debug) {
+    process.stderr.write(`[host_spawn_rscript] Rscript ${args.join(" ")}\n`);
+  }
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn("Rscript", args, { stdio: "inherit" });
+    let timeout_id = null;
+    if (options.timeout > 0) {
+      timeout_id = setTimeout(() => {
+        if (options.debug) {
+          process.stderr.write(`[host_spawn_rscript] Timeout (${options.timeout}s) reached, sending SIGINT\n`);
+        }
+        proc.kill("SIGINT");
+      }, options.timeout * 1000);
+    }
+    proc.on("error", reject);
+    proc.on("close", (code) => {
+      if (timeout_id) clearTimeout(timeout_id);
+      resolve(code ?? 0);
+    });
+  });
+}
+
+/**
  * Spawn the worker (Stage 2) with a JSON work spec on its stdin.
  * Dispatches to deno_spawn_worker or node_spawn_worker based on requested runtime.
  * @param {string} runtime - Requested runtime (e.g. "deno:webr")
@@ -269,7 +362,13 @@ async function deno_spawn_worker(worker_path, spec) {
  */
 async function spawn_worker(runtime, spec) {
   const worker_path = path.join(__dirname, "rw_worker.js");
-  const [host] = runtime.split(":");
+  const [host, engine] = runtime.split(":");
+  if (host === "host") {
+    if (engine === "rscript") {
+      return host_spawn_rscript(spec);
+    }
+    throw new Error(`Unsupported host engine: ${engine}`);
+  }
   if (host === "deno") {
     return deno_spawn_worker(worker_path, spec);
   }
@@ -331,6 +430,8 @@ Options (general):
 
 Options (runtime):
   --runtime=[host]:[engine]     Runtime environment (default: 'deno:webr')
+                                  host: 'deno', 'node', or 'host'
+                                  engine: 'webr' or 'rscript'
   --runtime-opt=[key]=[value]   Runtime-specific option (repeatable)
                                   shims=[shim][,[shim]] — comma-separated shims
                                   (default: runtime-opt in ./.rwconfig,
@@ -998,16 +1099,19 @@ async function main() {
     const [host, engine] = options.runtime.split(":");
     let host_version = "unknown";
     try {
-      const res = spawnSync(host, ["--version"], { encoding: "utf8" });
+      const exec = host === "host" ? (engine === "rscript" ? "Rscript" : host) : host;
+      const res = spawnSync(exec, ["--version"], { encoding: "utf8" });
       if (res.status === 0) {
-        host_version = res.stdout.trim().split(/\s+/).find(v => /^\d+\.\d+\./.test(v)) || res.stdout.trim();
+        const output = res.stdout.trim() || res.stderr.trim();
+        host_version = output.split(/\r?\n/)[0].split(/\s+/).find(v => /^\d+\.\d+\./.test(v)) || output.split(/\r?\n/)[0];
         // Standardize Node.js version output (remove leading 'v')
         if (host === "node") host_version = host_version.replace(/^v/, "");
       }
     } catch {
       // already validated that it exists, so this is just a fallback
     }
-    console.error(`Runtime: ${host} ${host_version} (${engine} ${webr_version})`);
+    const engine_version = engine === "webr" ? ` (${engine} ${webr_version})` : ` (${engine})`;
+    console.error(`Runtime: ${host} ${host_version}${engine_version}`);
   }
 
   if (command.type === "install") {

@@ -100,6 +100,8 @@ Options (general):
 
 Options (runtime):
   --runtime=[host]:[engine]     Runtime environment (default: 'deno:webr')
+                                  host: 'deno', 'node', or 'host'
+                                  engine: 'webr' or 'rscript'
   --runtime-opt=[key]=[value]   Runtime-specific option (repeatable)
                                   shims=[shim][,[shim]] — comma-separated shims
                                   (default: runtime-opt in ./.rwconfig,

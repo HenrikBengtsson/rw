@@ -58,7 +58,7 @@ rw [options] [script.R] [-- args]
 ```
 
 - `--runtime=<host>:<engine>`: (Default: `deno:webr`). Valid hosts: `deno`,
-  `node`. Valid engines: `webr`.
+  `node`, `host`. Valid engines: `webr`, `rscript`.
 - `--runtime-opt=<key>=<value>`: Runtime-specific configuration.
 - `--expr="<R code>"`: Evaluate R code provided as a string.
 
