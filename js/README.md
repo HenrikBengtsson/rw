@@ -105,10 +105,12 @@ don't have to re-install packages each time. This can be done by using
 
 ## Secure Sandboxing
 
-`rw` leverages the security features of **[Deno]** to provide a robust
-**sandbox** for R code. This is the recommended way to run potentially
-untrusted R code that might attempt to access your local files, your
-secrets, use your internet connection, impersonate you, and so on.
+`rw` leverages the [security
+features](https://docs.deno.com/runtime/fundamentals/security/) of
+**[Deno]** to provide a robust **sandbox** for R code. This is the
+recommended way to run potentially untrusted R code that might attempt
+to access your local files, your secrets, use your internet
+connection, impersonate you, and so on.
 
 ```sh
 rw --runtime="deno:webr" \
