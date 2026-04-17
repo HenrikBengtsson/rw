@@ -30,6 +30,10 @@ jobs:
         with:
           deno-version: v2.x
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
       - name: Cache npm packages
         id: cache-npm
         uses: actions/cache@v4
@@ -63,6 +67,10 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
 
       - name: Cache npm packages
         id: cache-npm
