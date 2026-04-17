@@ -1,3 +1,5 @@
+[![Check](https://github.com/futureverse/rw/actions/workflows/check.yml/badge.svg)](https://github.com/futureverse/rw/actions/workflows/check.yml)
+
 # rw: CLI for webR with Sandboxing Features
 
 _This is work in-progress - it only works partially. Please come back later._

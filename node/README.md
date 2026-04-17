@@ -1,3 +1,5 @@
+[![Check](https://github.com/futureverse/rw/actions/workflows/check.yml/badge.svg)](https://github.com/futureverse/rw/actions/workflows/check.yml)
+
 # rw: CLI for R with Multi-Runtime Support
 
 _WARNING: This is work under development. I strongly recommend that

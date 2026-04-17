@@ -1,15 +1,15 @@
-name: Deno
+name: Check
 
 on:
   push:
     branches: [develop, main]
     paths:
       - "node/**"
-      - ".github/workflows/deno.yml"
+      - ".github/workflows/check.yml"
   pull_request:
     paths:
       - "node/**"
-      - ".github/workflows/deno.yml"
+      - ".github/workflows/check.yml"
 
 jobs:
   # -------------------------------------------------------------------------
