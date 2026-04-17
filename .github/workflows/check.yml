@@ -119,5 +119,5 @@ jobs:
 
       - name: Run integration tests (Node)
         run: |
-          node --test tests/node/
+          node --test 'tests/node/*.js'
         timeout-minutes: 30
