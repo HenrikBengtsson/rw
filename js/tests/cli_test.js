@@ -3,7 +3,7 @@
  * Run with:  deno test --allow-read --allow-write --allow-env --allow-sys tests/cli_test.js
  */
 
-import { assertEquals, assertThrows } from "jsr:@std/assert";
+import { assertArrayIncludes, assertEquals, assertThrows } from "jsr:@std/assert";
 import {
   load_rwconfig,
   parse_args,
@@ -146,6 +146,21 @@ Deno.test("parse_args: negative --timeout throws", () => {
     Error,
     "Timeout must be a non-negative",
   );
+});
+
+Deno.test("parse_args: --allow-net sets flag", () => {
+  const { options } = parse_clean(["--no-config", "--allow-net", "--expr=1"]);
+  assertArrayIncludes(options.allow_net, [""]);
+});
+
+Deno.test("parse_args: --allow-net=host sets flag", () => {
+  const { options } = parse_clean(["--no-config", "--allow-net=google.com", "--expr=1"]);
+  assertArrayIncludes(options.allow_net, ["google.com"]);
+});
+
+Deno.test("parse_args: --allow-net=host1,host2 accumulates", () => {
+  const { options } = parse_clean(["--no-config", "--allow-net=a.com,b.com", "--allow-net=c.com", "--expr=1"]);
+  assertArrayIncludes(options.allow_net, ["a.com", "b.com", "c.com"]);
 });
 
 Deno.test("parse_args: non-numeric --timeout throws", () => {

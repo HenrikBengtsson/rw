@@ -212,8 +212,11 @@ function deno_write_paths(spec) {
   const paths = [__pkgdir, "/dev"];
   if (spec.task === "run") {
     const o = spec.options;
+    const allow_net = [...(o.allow_net || [])];
     if (o.r_libs_user && o.persistent) {
       paths.push(o.r_libs_user);
+    }
+    if (o.persistent || allow_net.length > 0) {
       paths.push("/tmp"); // webR writes temp files during package download/extraction
     }
     if (o.bastion_host && !o.bastion_readonly) {
@@ -237,8 +240,13 @@ function deno_write_paths(spec) {
 async function deno_spawn_worker(worker_path, spec) {
   const read_paths = deno_read_paths(spec);
   const write_paths = deno_write_paths(spec);
-  const needs_net = spec.task === "run" && !!spec.options?.r_libs_user &&
-    spec.options?.persistent;
+  const allow_net = [...(spec.options?.allow_net || [])];
+  const needs_net = (spec.task === "run" && !!spec.options?.r_libs_user &&
+    spec.options?.persistent) || allow_net.length > 0;
+
+  if (needs_net && allow_net.length === 0) {
+    allow_net.push(""); // empty string represents "allow all"
+  }
 
   const args = [
     "run",
@@ -247,10 +255,23 @@ async function deno_spawn_worker(worker_path, spec) {
     `--allow-read=${read_paths.join(",")}`,
     `--allow-write=${write_paths.join(",")}`,
   ];
-  if (needs_net) {
-    args.push("--allow-net"); // needed to download packages when --persistent
-    args.push("--allow-run"); // needed to spawn tar for package extraction
+  if (allow_net.length > 0) {
+    if (allow_net.includes("")) {
+      args.push("--allow-net");
+    } else {
+      args.push(`--allow-net=${allow_net.join(",")}`);
+    }
   }
+
+  const allow_run = [...(spec.options?.allow_run || [])];
+  if (allow_run.length > 0) {
+    if (allow_run.includes("")) {
+      args.push("--allow-run");
+    } else {
+      args.push(`--allow-run=${allow_run.join(",")}`);
+    }
+  }
+
   args.push(worker_path);
 
   if (spec.options?.debug || spec.debug) {
@@ -306,6 +327,8 @@ function make_run_spec(options) {
     exprs: options.exprs,
     epilogue_exprs: options.epilogue_exprs,
     timeout: options.timeout,
+    allow_net: options.allow_net,
+    allow_run: options.allow_run,
   };
 }
 
@@ -358,6 +381,9 @@ Options (runtime):
                                 the main code (mode: 'ro' (read-only) or 'rw')
                                 (default: bastion in ./.rwconfig,
                                 or './bastion/' if it exists)
+  --allow-net[=host[,...]]      Allow network access (Deno runtime only)
+                                (default: none, unless --persistent is set)
+  --allow-run[=bin[,...]]       Allow running subprocesses (Deno runtime only)
   --prologue=[R script]         R script evaluated before main R code
   --epilogue=[R script]         R script evaluated after main R code
   --prologue-expr=[R code]      R code evaluated before main R code
@@ -450,6 +476,8 @@ export function parse_args(args) {
     exprs: [],
     epilogue_exprs: [],
     timeout: 0,
+    allow_net: [],
+    allow_run: [],
     r_args: [],
   };
 
@@ -529,6 +557,16 @@ export function parse_args(args) {
           options.shims.push(...val.split(","));
         }
       }
+    } else if (arg === "--allow-net") {
+      options.allow_net.push(""); // empty string represents "allow all"
+    } else if (arg.startsWith(prefix = "--allow-net=")) {
+      value = arg.slice(prefix.length);
+      options.allow_net.push(...value.split(","));
+    } else if (arg === "--allow-run") {
+      options.allow_run.push(""); // empty string represents "allow all"
+    } else if (arg.startsWith(prefix = "--allow-run=")) {
+      value = arg.slice(prefix.length);
+      options.allow_run.push(...value.split(","));
     } else if (arg.startsWith(prefix = "--prologue-expr=")) {
       value = arg.slice(prefix.length);
       if (options.debug) console.log(`prologue_expr=${value}`);

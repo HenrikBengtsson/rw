@@ -176,6 +176,9 @@ Options (runtime):
                                 the main code (mode: 'ro' (read-only) or 'rw')
                                 (default: bastion in ./.rwconfig,
                                 or './bastion/' if it exists)
+  --allow-net[=host[,...]]      Allow network access (Deno runtime only)
+                                (default: none, unless --persistent is set)
+  --allow-run[=bin[,...]]       Allow running subprocesses (Deno runtime only)
   --prologue=[R script]         R script evaluated before main R code
   --epilogue=[R script]         R script evaluated after main R code
   --prologue-expr=[R code]      R code evaluated before main R code
