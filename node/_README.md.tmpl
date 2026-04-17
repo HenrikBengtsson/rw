@@ -11,34 +11,30 @@ R code in a variety of environments (runtimes), including **[webR]**
 via [Deno] (for high isolation) or [Node.js] (for partial isolation).
 
 ```sh
-$ rw --prologue=trusted.R untrusted.R
+rw --prologue=trusted.R untrusted.R
 ```
 
 This is useful for evaluating arbitrary, potentially untrusted R
 code in a secure manner, or for testing R code and packages in **webR**
 without a browser.
 
-
 ## Run without Installation
 
 ### Using Node.js
 
 ```sh
-$ npx @henrikbengtsson/rw --expr="sum(1:100)"
-[1] 5050
+npx @henrikbengtsson/rw --expr="sum(1:100)"
 ```
 
 ### Using Deno
 
 ```sh
-$ deno run --quiet --allow-all npm:@henrikbengtsson/rw --expr='sum(1:100)'
-[1] 5050
+deno run --quiet --allow-all npm:@henrikbengtsson/rw --expr='sum(1:100)'
 ```
-
 
 ## Installation
 
-### Using Node.js
+### Node.js (npm)
 
 ```sh
 npm install --global @henrikbengtsson/rw
@@ -48,8 +44,7 @@ The `rw` executable is installed to the `bin/` subfolder under `npm
 config get prefix`. Prepend that to your `PATH`, e.g. `export
 PATH=$(npm config get prefix)/bin:$PATH`.
 
-
-### Using Deno
+### Deno
 
 ```sh
 deno install --global --allow-all npm:@henrikbengtsson/rw
@@ -61,17 +56,19 @@ your `PATH`, e.g. `export PATH=~/.deno/bin:$PATH`.
 To install the development version, use:
 
 ```sh
-deno install --global --name rw-devel --allow-all https://raw.githubusercontent.com/futureverse/rw/refs/heads/develop/node/deno.json
+deno install --global --name rw-devel --allow-all \
+  https://raw.githubusercontent.com/futureverse/rw/refs/heads/develop/node/deno.json
 ```
-
 
 ## Command-line Interface
 
 ```sh
-$ rw --help
-{{ HELP }}
+rw --help
 ```
 
+```text
+{{ HELP }}
+```
 
 [webR]: https://github.com/r-wasm/webr/
 [Node.js]: https://nodejs.org/en/

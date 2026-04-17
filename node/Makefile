@@ -37,7 +37,7 @@ README.md: _README.md.tmpl src/cli.js
 	@bfr=$$(cat "$<"); \
 	help=$$(node src/cli.js --help 2> /dev/null || true); \
 	bfr=$$(echo "$${bfr/\{\{ HELP \}\}/$$help}"); \
-	printf "$$bfr" > $@
+	printf "$$bfr\n" > $@
 	grep -F "Version:" "$@"
 	@echo "README.md"
 
