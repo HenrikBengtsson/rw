@@ -91,7 +91,11 @@ When using the `deno` host, `src/cli.js` maps the requested task (e.g., a simple
 run vs. a persistent install) to the minimal set of Deno permissions:
 
 - `deno_read_paths()`: Determines which host directories should be readable.
+  - Includes all `--bind` and `--bastion` paths, and `r-libs-user`.
 - `deno_write_paths()`: Determines which host directories should be writable.
+  - Honors `:ro` (read-only) and `:rw` (read-write) suffixes on `--bind` and
+    `--bastion`.
+  - Only allows writing to `r-libs-user` if the `--persistent` flag is set.
 
 ### Shims
 
