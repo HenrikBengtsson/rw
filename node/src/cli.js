@@ -710,6 +710,22 @@ export function parse_args(args) {
   }
   if (options.runtime === null) options.runtime = "deno:webr";
 
+  // Node.js does not (yet) support read-only binds or bastions
+  if (options.runtime.startsWith("node:")) {
+    for (const bind of options.binds) {
+      if (bind.readonly) {
+        throw new Error(
+          `Read-only binds (:ro) are not supported with the ${options.runtime} runtime.`,
+        );
+      }
+    }
+    if (options.bastion_host && options.bastion_readonly) {
+      throw new Error(
+        `Read-only bastion (:ro) is not supported with the ${options.runtime} runtime.`,
+      );
+    }
+  }
+
   // Verbose: report which config files are in use
   if (options.verbose && !options.no_config) {
     if (fs.existsSync(USER_RWCONFIG_PATH)) {

@@ -91,21 +91,17 @@ describe("--r-libs-user under Node.js", () => {
     }
   });
 
-  it("accepts :ro bind but does NOT (yet) enforce it in Node.js", () => {
+  it("errors for :ro bind in Node.js", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_bind_node_ro_"));
     try {
       const { code, stderr } = rw([
         "--no-config",
         `--bind=${tmp}:/data:ro`,
-        "--expr=cat('test', file='/data/test.txt')",
+        "--expr=NULL",
       ]);
       
-      assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
-      
-      // Node.js doesn't enforce read-only yet, so this file WILL be created.
-      // This test serves as documentation of the current limitation.
-      const exists = fs.existsSync(path.join(tmp, "test.txt"));
-      assert.ok(exists, "File was created despite :ro (Node.js limitation)");
+      assert.equal(code, 1, `exit ${code}\nstderr: ${stderr}`);
+      assert.ok(stderr.includes("Read-only binds (:ro) are not supported"), `stderr: ${stderr}`);
     } finally {
       fs.rmSync(tmp, { recursive: true });
     }
