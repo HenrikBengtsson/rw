@@ -32,6 +32,7 @@ const DENO_ARGS = [
   "--config",
   DENO_CFG,
   CLI,
+  "--runtime=deno:webr",
 ];
 
 /**

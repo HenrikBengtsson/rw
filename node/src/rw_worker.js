@@ -5,7 +5,7 @@
  *
  * Receives a JSON work spec on stdin from the supervisor (cli.js) and
  * executes the requested R/WASM/webR task.  This is the process that will
- * eventually be launched with restricted sandbox capabilities (e.g. under
+ * eventually be launched with restricted runtime capabilities (e.g. under
  * Deno with limited --allow-* permissions).
  *
  * Work spec shapes:

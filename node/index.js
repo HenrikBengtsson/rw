@@ -1,6 +1,6 @@
 /**
  * @module @henrikbengtsson/rw
- * @description Run R code in a sandboxed WebAssembly environment via webR
+ * @description Run R code in various isolated environments via webR or Rscript
  */
 
 export {

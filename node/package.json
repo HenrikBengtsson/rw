@@ -1,7 +1,7 @@
 {
   "name": "@henrikbengtsson/rw",
-  "version": "0.0.207",
-  "description": "Evaluate R Code within WebAssembly (WASM) via Node.js",
+  "version": "0.0.300",
+  "description": "CLI for R with Multi-Runtime Support",
   "keywords": [
     "webR",
     "wasm",

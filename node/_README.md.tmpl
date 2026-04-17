@@ -1,4 +1,4 @@
-# rw: CLI for webR with Sandboxing Features
+# rw: CLI for R with Multi-Runtime Support
 
 _WARNING: This is work under development. I strongly recommend that
 you do not depend on it at this time. Please do not publish a package
@@ -6,19 +6,17 @@ to NPM that depends on it._
 
 ## TL;DR
 
-The `rw` tools is an Rscript-like command-line-interface (CLI) tool
-for running R code in an **[webR]** WebAssembly environment via either
-the [Node.js] or the [Deno] JavaScript engines, e.g.
+The `rw` tool is an Rscript-like command-line-interface (CLI) for running
+R code in a variety of environments (runtimes), including **[webR]**
+via [Deno] (for high isolation) or [Node.js] (for partial isolation).
 
 ```sh
-$ rw --r-libs=~/R/webR --prologue=trusted.R untrusted.R
+$ rw --prologue=trusted.R untrusted.R
 ```
 
-This can be useful when we need to evaluate arbitrary, untrusted R
-code in a secure manner isolated from the host system. It is also
-useful for making sure R code and R packages work in **webR** without
-having to go the extra mile to upload packages online and then testing
-it in the web browser at <https://webr.sh/>.
+This is useful for evaluating arbitrary, potentially untrusted R
+code in a secure manner, or for testing R code and packages in **webR**
+without a browser.
 
 
 ## Run without Installation

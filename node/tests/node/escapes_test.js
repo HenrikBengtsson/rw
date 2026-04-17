@@ -1,6 +1,6 @@
 /**
- * Integration tests: sandbox escape attempts via webr::eval_js() MUST succeed
- * when rw runs under Node.js, because Node does not support sandboxing.
+ * Integration tests: escape attempts via webr::eval_js() MUST succeed
+ * when rw runs under Node.js, because Node does not support high isolation.
  *
  * Each test spawns a full `node cli.js` process (webR startup included), so
  * these are intentionally slow (~10-30 s each).  Run with:
@@ -29,7 +29,7 @@ const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
  * @returns {{ code: number, stdout: string, stderr: string }}
  */
 function rw(r_code) {
-  const result = spawnSync(process.execPath, [CLI], {
+  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr"], {
     input: r_code,
     encoding: "utf8",
     timeout: 120_000,
@@ -42,10 +42,10 @@ function rw(r_code) {
 }
 
 // ---------------------------------------------------------------------------
-// Escape tests — all three MUST succeed under Node.js (no sandbox)
+// Escape tests — all three MUST succeed under Node.js (no high isolation)
 // ---------------------------------------------------------------------------
 
-describe("Node.js escape tests (no sandbox — escapes expected to succeed)", () => {
+describe("Node.js escape tests (no high isolation — escapes expected to succeed)", () => {
   it("escape: webr::eval_js CAN read arbitrary host files (fs.readFileSync)", () => {
     const hostname = fs.readFileSync("/etc/hostname", "utf8").trim();
     assert.ok(

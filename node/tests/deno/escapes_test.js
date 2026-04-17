@@ -1,5 +1,5 @@
 /**
- * Integration tests: sandbox escape attempts via webr::eval_js() must be
+ * Integration tests: escape attempts via webr::eval_js() must be
  * blocked when rw runs under Deno with restricted --allow-* permissions.
  *
  * Each test spawns a full `rw` process (webR startup included), so these are
@@ -20,16 +20,16 @@ import * as path from "node:path";
 // Helper
 // ---------------------------------------------------------------------------
 
-// Always invoke the local cli.js via `deno run` so the Deno sandbox is active
+// Always invoke the local cli.js via `deno run` so high isolation is active
 // regardless of which `rw` binary is first on PATH (the Node.js install would
-// have no sandbox restrictions and the tests would give false negatives).
+// have no isolation restrictions and the tests would give false negatives).
 const CLI = new URL("../../src/cli.js", import.meta.url).pathname;
 const DENO_CFG = new URL("../../deno.json", import.meta.url).pathname;
 
 /**
  * Run cli.js under Deno (with full supervisor permissions) with R code on
  * stdin.  The supervisor then spawns the worker with restricted permissions,
- * which is the sandbox boundary under test.
+ * which is the isolation boundary under test.
  * @param {string} r_code
  * @returns {Promise<{ code: number, stdout: string, stderr: string }>}
  */
@@ -46,6 +46,7 @@ async function rw(r_code) {
       "--config",
       DENO_CFG,
       CLI,
+      "--runtime=deno:webr",
     ],
     stdin: "piped",
     stdout: "piped",

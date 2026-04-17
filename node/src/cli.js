@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   author,
@@ -134,12 +134,28 @@ function unset_rwconfig(field, file_path = RWCONFIG_PATH) {
 }
 
 /**
- * Validate a sandbox value, throwing if unsupported.
- * @param {string} value
+ * Validate a runtime value, throwing if unsupported or host is missing.
+ * @param {string} value - The runtime string (e.g. "deno:webr")
  */
-function validate_sandbox(value) {
-  if (value !== "webr") {
-    throw new Error(`Unknown sandbox: '${value}'. Only 'webr' is supported.`);
+function validate_runtime(value) {
+  const parts = value.split(":");
+  if (parts.length !== 2) {
+    throw new Error(`Invalid runtime format: '${value}'. Expected <host>:<engine>, e.g. deno:webr`);
+  }
+  const [host, engine] = parts;
+  if (engine !== "webr") {
+    throw new Error(`Unknown runtime engine: '${engine}'. Only 'webr' is supported.`);
+  }
+  if (host !== "deno" && host !== "node") {
+    throw new Error(`Unknown runtime host: '${host}'. Only 'deno' and 'node' are supported.`);
+  }
+
+  // Check if host executable is available
+  try {
+    const { status } = spawnSync(host, ["--version"], { stdio: "ignore" });
+    if (status !== 0) throw new Error();
+  } catch {
+    throw new Error(`Runtime host '${host}' not found on PATH. Please install it.`);
   }
 }
 
@@ -153,7 +169,7 @@ function validate_sandbox(value) {
  */
 async function node_spawn_worker(worker_path, spec) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(process.execPath, [worker_path], {
+    const proc = spawn("node", [worker_path], {
       stdio: ["pipe", "inherit", "inherit"],
     });
     proc.stdin.write(JSON.stringify(spec), "utf8");
@@ -227,39 +243,34 @@ async function deno_spawn_worker(worker_path, spec) {
   }
   args.push(worker_path);
 
-  // Use globalThis.Deno so this file remains parseable under Node.js
-  if (spec.options?.debug) {
+  if (spec.options?.debug || spec.debug) {
     process.stderr.write(
-      `[deno_spawn_worker] ${
-        [globalThis.Deno.execPath(), ...args].join(" ")
-      }\n`,
+      `[deno_spawn_worker] deno ${args.join(" ")}\n`,
     );
   }
-  const cmd = new globalThis.Deno.Command(globalThis.Deno.execPath(), {
-    args,
-    stdin: "piped",
-    stdout: "inherit",
-    stderr: "inherit",
-  });
 
-  const proc = cmd.spawn();
-  const writer = proc.stdin.getWriter();
-  await writer.write(new TextEncoder().encode(JSON.stringify(spec)));
-  await writer.close();
-  const { code } = await proc.status;
-  return code;
+  return new Promise((resolve, reject) => {
+    const proc = spawn("deno", args, {
+      stdio: ["pipe", "inherit", "inherit"],
+    });
+    proc.stdin.write(JSON.stringify(spec), "utf8");
+    proc.stdin.end();
+    proc.on("error", reject);
+    proc.on("close", (code) => resolve(code ?? 0));
+  });
 }
 
 /**
  * Spawn the worker (Stage 2) with a JSON work spec on its stdin.
- * Dispatches to deno_spawn_worker (privilege-separated) when running under
- * Deno, and node_spawn_worker (inherited capabilities) under Node.js.
+ * Dispatches to deno_spawn_worker or node_spawn_worker based on requested runtime.
+ * @param {string} runtime - Requested runtime (e.g. "deno:webr")
  * @param {Object} spec - Work spec for the worker
  * @returns {Promise<number>} Worker exit code
  */
-async function spawn_worker(spec) {
+async function spawn_worker(runtime, spec) {
   const worker_path = path.join(__dirname, "rw_worker.js");
-  if (typeof globalThis.Deno !== "undefined") {
+  const [host] = runtime.split(":");
+  if (host === "deno") {
     return deno_spawn_worker(worker_path, spec);
   }
   return node_spawn_worker(worker_path, spec);
@@ -288,7 +299,7 @@ function make_run_spec(options) {
 
 function show_help() {
   console.log(`
-rw: CLI for Sandboxed R Execution
+rw: CLI for R with Multi-Runtime Support
 
 Usage:
 
@@ -318,11 +329,11 @@ Options (general):
   --no-config                   Ignore ./.rwconfig
   --vanilla                     Run R with --vanilla
 
-Options (sandboxing):
-  --sandbox=<sandbox>           Sandbox runtime (default: 'webr')
-  --sandbox-opt=<key>=<value>   Sandbox-specific option (repeatable)
+Options (runtime):
+  --runtime=<host>:<engine>     Runtime environment (default: 'deno:webr')
+  --runtime-opt=<key>=<value>   Runtime-specific option (repeatable)
                                   shims=<shim>[,<shim>] — comma-separated shims
-                                  (default: sandbox-opt in ./.rwconfig,
+                                  (default: runtime-opt in ./.rwconfig,
                                   or 'shims=install.packages')
   --r-libs-user=<host-dir>      Bind R user library to host directory
                                 (only active with --persistent;
@@ -371,7 +382,7 @@ Examples:
   ## An R session with the R user library on host
   rw --persistent main.R
 
-  ## Evaluate untrusted R code in sandbox, with data passed in
+  ## Evaluate untrusted R code in a runtime, with data passed in
   ## and out via a bastion folder accessible only to prologue/epilogue
   mkdir -p bastion
   Rscript -e "saveRDS(list(a=1, b=2), 'bastion/in.rds')"
@@ -412,7 +423,7 @@ export function parse_args(args) {
     debug: false,
     verbose: false,
     no_config: false,
-    sandbox: null,
+    runtime: null,
     webr_args: [],
     r_libs_user: null,
     binds: [],
@@ -469,15 +480,15 @@ export function parse_args(args) {
       value = arg.slice(prefix.length);
       if (options.debug) console.log(`expr=${value}`);
       options.exprs.push(value);
-    } else if (arg.startsWith(prefix = "--sandbox=")) {
+    } else if (arg.startsWith(prefix = "--runtime=")) {
       value = arg.slice(prefix.length);
-      options.sandbox = value; // explicit CLI flag
-    } else if (arg.startsWith(prefix = "--sandbox-opt=")) {
+      options.runtime = value; // explicit CLI flag
+    } else if (arg.startsWith(prefix = "--runtime-opt=")) {
       value = arg.slice(prefix.length);
       const eq = value.indexOf("=");
       if (eq === -1) {
         throw new Error(
-          `Invalid --sandbox-opt format: '${value}'. Expected key=value.`,
+          `Invalid --runtime-opt format: '${value}'. Expected key=value.`,
         );
       }
       const key = value.slice(0, eq);
@@ -485,7 +496,22 @@ export function parse_args(args) {
       if (key === "shims") {
         options.shims.push(...val.split(","));
       } else {
-        throw new Error(`Unknown --sandbox-opt key: '${key}'`);
+        throw new Error(`Unknown --runtime-opt key: '${key}'`);
+      }
+    } else if (arg.startsWith(prefix = "--sandbox=")) {
+      // Deprecated but supported for now
+      value = arg.slice(prefix.length);
+      options.runtime = value;
+    } else if (arg.startsWith(prefix = "--sandbox-opt=")) {
+      // Deprecated but supported for now
+      value = arg.slice(prefix.length);
+      const eq = value.indexOf("=");
+      if (eq !== -1) {
+        const key = value.slice(0, eq);
+        const val = value.slice(eq + 1);
+        if (key === "shims") {
+          options.shims.push(...val.split(","));
+        }
       }
     } else if (arg.startsWith(prefix = "--prologue-expr=")) {
       value = arg.slice(prefix.length);
@@ -608,12 +634,18 @@ export function parse_args(args) {
   // Apply rwconfig defaults (raw values; lower precedence than CLI flags)
   const rwconfig = options.no_config ? {} : load_all_rwconfigs().config;
   if (!options.no_config) {
-    if (options.sandbox === null && rwconfig["sandbox"]) {
-      options.sandbox = rwconfig["sandbox"];
+    if (options.runtime === null && rwconfig["runtime"]) {
+      options.runtime = rwconfig["runtime"];
       if (options.debug) {
-        console.log(`sandbox=${options.sandbox} (from .rwconfig)`);
+        console.log(`runtime=${options.runtime} (from .rwconfig)`);
+      }
+    } else if (options.runtime === null && rwconfig["sandbox"]) {
+      options.runtime = rwconfig["sandbox"];
+      if (options.debug) {
+        console.log(`runtime=${options.runtime} (from .rwconfig [deprecated sandbox key])`);
       }
     }
+
     if (options.r_libs_user === null && rwconfig["r-libs-user"]) {
       options.r_libs_user = rwconfig["r-libs-user"];
       if (options.debug) {
@@ -649,7 +681,7 @@ export function parse_args(args) {
       }
     }
   }
-  if (options.sandbox === null) options.sandbox = "webr";
+  if (options.runtime === null) options.runtime = "deno:webr";
 
   // Verbose: report which config files are in use
   if (options.verbose && !options.no_config) {
@@ -741,10 +773,10 @@ export function parse_args(args) {
   // Apply default shims (from .rwconfig, then built-in default)
   if (options.shims.length === 0) {
     if (!options.no_config) {
-      const rwconfig_opt = rwconfig["sandbox-opt"];
+      let rwconfig_opt = rwconfig["runtime-opt"] || rwconfig["sandbox-opt"];
       if (rwconfig_opt) {
         if (options.debug) {
-          console.log(`sandbox-opt=${rwconfig_opt} (from .rwconfig)`);
+          console.log(`runtime-opt=${rwconfig_opt} (from .rwconfig)`);
         }
         const eq = rwconfig_opt.indexOf("=");
         if (eq !== -1 && rwconfig_opt.slice(0, eq).trim() === "shims") {
@@ -811,7 +843,7 @@ async function main() {
     }
     let exit_code;
     try {
-      exit_code = await spawn_worker({ task: "env", field });
+      exit_code = await spawn_worker(options.runtime, { task: "env", field });
     } catch (e) {
       console.error("ERROR: " + e.message);
       process.exit(1);
@@ -952,12 +984,29 @@ async function main() {
     return;
   }
 
-  // Validate sandbox before any operation that uses it
+  // Validate runtime before any operation that uses it
   try {
-    validate_sandbox(options.sandbox);
+    validate_runtime(options.runtime);
   } catch (e) {
     console.error("ERROR: " + e.message);
     process.exit(1);
+  }
+
+  // Report active runtime in verbose mode
+  if (options.verbose) {
+    const [host, engine] = options.runtime.split(":");
+    let host_version = "unknown";
+    try {
+      const res = spawnSync(host, ["--version"], { encoding: "utf8" });
+      if (res.status === 0) {
+        host_version = res.stdout.trim().split(/\s+/).find(v => /^\d+\.\d+\./.test(v)) || res.stdout.trim();
+        // Standardize Node.js version output (remove leading 'v')
+        if (host === "node") host_version = host_version.replace(/^v/, "");
+      }
+    } catch {
+      // already validated that it exists, so this is just a fallback
+    }
+    console.error(`Runtime: ${host} ${host_version} (${engine} ${webr_version})`);
   }
 
   if (command.type === "install") {
@@ -1052,7 +1101,7 @@ async function main() {
 
     let exit_code;
     try {
-      exit_code = await spawn_worker({
+      exit_code = await spawn_worker(options.runtime, {
         task: "run",
         options: make_run_spec(options),
       });
@@ -1091,7 +1140,7 @@ async function main() {
 
     let exit_code;
     try {
-      exit_code = await spawn_worker({
+      exit_code = await spawn_worker(options.runtime, {
         task: "run",
         options: make_run_spec(options),
       });
@@ -1121,7 +1170,7 @@ async function main() {
   // Run
   let exit_code;
   try {
-    exit_code = await spawn_worker({
+    exit_code = await spawn_worker(options.runtime, {
       task: "run",
       options: make_run_spec(options),
     });
@@ -1150,4 +1199,4 @@ const isMain = typeof globalThis.Deno !== "undefined"
     fileURLToPath(import.meta.url) === _realpath(process.argv[1]);
 if (isMain) main();
 
-export { load_rwconfig, unset_rwconfig, validate_sandbox, write_rwconfig };
+export { load_rwconfig, unset_rwconfig, validate_runtime, write_rwconfig };

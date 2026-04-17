@@ -31,7 +31,7 @@ const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
  * @returns {{ code: number, stdout: string, stderr: string }}
  */
 function rw(args = [], opts = {}) {
-  const result = spawnSync(process.execPath, [CLI, ...args], {
+  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", ...args], {
     input: opts.stdin,
     encoding: "utf8",
     timeout: 120_000,

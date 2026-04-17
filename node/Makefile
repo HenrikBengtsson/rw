@@ -33,9 +33,9 @@ node-examples-tests:
 	node --test tests/node/examples_test.js
 
 ## Regenerate README.md
-README.md: _README.md.tmpl
+README.md: _README.md.tmpl src/cli.js
 	@bfr=$$(cat "$<"); \
-	help=$$(npx rw --help 2> /dev/null || true); \
+	help=$$(node src/cli.js --help 2> /dev/null || true); \
 	bfr=$$(echo "$${bfr/\{\{ HELP \}\}/$$help}"); \
 	printf "$$bfr" > $@
 	grep -F "Version:" "$@"

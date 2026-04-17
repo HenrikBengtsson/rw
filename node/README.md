@@ -1,4 +1,4 @@
-# rw: CLI for webR with Sandboxing Features
+# rw: CLI for R with Multi-Runtime Support
 
 _WARNING: This is work under development. I strongly recommend that
 you do not depend on it at this time. Please do not publish a package
@@ -6,19 +6,17 @@ to NPM that depends on it._
 
 ## TL;DR
 
-The `rw` tools is an Rscript-like command-line-interface (CLI) tool
-for running R code in an **[webR]** WebAssembly environment via either
-the [Node.js] or the [Deno] JavaScript engines, e.g.
+The `rw` tool is an Rscript-like command-line-interface (CLI) for running
+R code in a variety of environments (runtimes), including **[webR]**
+via [Deno] (for high isolation) or [Node.js] (for partial isolation).
 
 ```sh
-$ rw --r-libs=~/R/webR --prologue=trusted.R untrusted.R
+$ rw --prologue=trusted.R untrusted.R
 ```
 
-This can be useful when we need to evaluate arbitrary, untrusted R
-code in a secure manner isolated from the host system. It is also
-useful for making sure R code and R packages work in **webR** without
-having to go the extra mile to upload packages online and then testing
-it in the web browser at <https://webr.sh/>.
+This is useful for evaluating arbitrary, potentially untrusted R
+code in a secure manner, or for testing R code and packages in **webR**
+without a browser.
 
 
 ## Run without Installation
@@ -72,7 +70,7 @@ deno install --global --name rw-devel --allow-all https://raw.githubusercontent.
 ```sh
 $ rw --help
 
-rw: CLI for Sandboxed R Execution
+rw: CLI for R with Multi-Runtime Support
 
 Usage:
 
@@ -102,11 +100,11 @@ Options (general):
   --no-config                   Ignore ./.rwconfig
   --vanilla                     Run R with --vanilla
 
-Options (sandboxing):
-  --sandbox=<sandbox>           Sandbox runtime (default: 'webr')
-  --sandbox-opt=<key>=<value>   Sandbox-specific option (repeatable)
+Options (runtime):
+  --runtime=<host>:<engine>     Runtime environment (default: 'deno:webr')
+  --runtime-opt=<key>=<value>   Runtime-specific option (repeatable)
                                   shims=<shim>[,<shim>] — comma-separated shims
-                                  (default: sandbox-opt in ./.rwconfig,
+                                  (default: runtime-opt in ./.rwconfig,
                                   or 'shims=install.packages')
   --r-libs-user=<host-dir>      Bind R user library to host directory
                                 (only active with --persistent;
@@ -155,7 +153,7 @@ Examples:
   ## An R session with the R user library on host
   rw --persistent main.R
 
-  ## Evaluate untrusted R code in sandbox, with data passed in
+  ## Evaluate untrusted R code in a runtime, with data passed in
   ## and out via a bastion folder accessible only to prologue/epilogue
   mkdir -p bastion
   Rscript -e "saveRDS(list(a=1, b=2), 'bastion/in.rds')"
@@ -174,7 +172,7 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.207
+Version: 0.0.300
 JS Runtime: node 24.12.0
 webR: 0.5.8
 License: MIT

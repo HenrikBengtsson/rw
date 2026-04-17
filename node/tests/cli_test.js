@@ -8,7 +8,7 @@ import {
   load_rwconfig,
   parse_args,
   unset_rwconfig,
-  validate_sandbox,
+  validate_runtime,
   write_rwconfig,
 } from "../src/cli.js";
 import * as path from "node:path";
@@ -157,54 +157,54 @@ Deno.test("parse_args: non-numeric --timeout throws", () => {
 });
 
 // ---------------------------------------------------------------------------
-// parse_args — sandbox
+// parse_args — runtime
 // ---------------------------------------------------------------------------
 
-Deno.test("parse_args: --sandbox=webr", () => {
+Deno.test("parse_args: --runtime=deno:webr", () => {
   const { options } = parse_clean([
     "--no-config",
-    "--sandbox=webr",
+    "--runtime=deno:webr",
     "--expr=1",
   ]);
-  assertEquals(options.sandbox, "webr");
+  assertEquals(options.runtime, "deno:webr");
 });
 
-Deno.test("parse_args: default sandbox is webr", () => {
+Deno.test("parse_args: default runtime is deno:webr", () => {
   const { options } = parse_clean(["--no-config", "--expr=1"]);
-  assertEquals(options.sandbox, "webr");
+  assertEquals(options.runtime, "deno:webr");
 });
 
-Deno.test("parse_args: --sandbox-opt shims=webr::install", () => {
+Deno.test("parse_args: --runtime-opt shims=webr::install", () => {
   const { options } = parse_clean([
     "--no-config",
-    "--sandbox-opt=shims=webr::install",
+    "--runtime-opt=shims=webr::install",
     "--expr=1",
   ]);
   assertEquals(options.shims, ["webr::install"]);
 });
 
-Deno.test("parse_args: --sandbox-opt shims= (empty) disables all shims", () => {
+Deno.test("parse_args: --runtime-opt shims= (empty) disables all shims", () => {
   const { options } = parse_clean([
     "--no-config",
-    "--sandbox-opt=shims=",
+    "--runtime-opt=shims=",
     "--expr=1",
   ]);
   assertEquals(options.shims, []);
 });
 
-Deno.test("parse_args: --sandbox-opt missing '=' throws", () => {
+Deno.test("parse_args: --runtime-opt missing '=' throws", () => {
   assertThrows(
-    () => parse_clean(["--no-config", "--sandbox-opt=shims", "--expr=1"]),
+    () => parse_clean(["--no-config", "--runtime-opt=shims", "--expr=1"]),
     Error,
-    "Invalid --sandbox-opt format",
+    "Invalid --runtime-opt format",
   );
 });
 
-Deno.test("parse_args: --sandbox-opt unknown key throws", () => {
+Deno.test("parse_args: --runtime-opt unknown key throws", () => {
   assertThrows(
-    () => parse_clean(["--no-config", "--sandbox-opt=unknown=val", "--expr=1"]),
+    () => parse_clean(["--no-config", "--runtime-opt=unknown=val", "--expr=1"]),
     Error,
-    "Unknown --sandbox-opt key",
+    "Unknown --runtime-opt key",
   );
 });
 
@@ -475,19 +475,40 @@ Deno.test("parse_args: script and --expr together throws", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validate_sandbox
+// validate_runtime
 // ---------------------------------------------------------------------------
 
-Deno.test("validate_sandbox: 'webr' is valid", () => {
-  // Should not throw
-  validate_sandbox("webr");
+Deno.test("validate_runtime: 'deno:webr' is valid", () => {
+  // Should not throw (assuming deno is on PATH)
+  validate_runtime("deno:webr");
 });
 
-Deno.test("validate_sandbox: unknown sandbox throws", () => {
+Deno.test("validate_runtime: 'node:webr' is valid", () => {
+  // Should not throw (assuming node is on PATH)
+  validate_runtime("node:webr");
+});
+
+Deno.test("validate_runtime: invalid format throws", () => {
   assertThrows(
-    () => validate_sandbox("docker"),
+    () => validate_runtime("webr"),
     Error,
-    "Unknown sandbox",
+    "Invalid runtime format",
+  );
+});
+
+Deno.test("validate_runtime: unknown engine throws", () => {
+  assertThrows(
+    () => validate_runtime("deno:docker"),
+    Error,
+    "Unknown runtime engine",
+  );
+});
+
+Deno.test("validate_runtime: unknown host throws", () => {
+  assertThrows(
+    () => validate_runtime("docker:webr"),
+    Error,
+    "Unknown runtime host",
   );
 });
 
@@ -503,10 +524,10 @@ Deno.test("load_rwconfig: missing file returns empty object", () => {
 Deno.test("load_rwconfig: parses key=value pairs", () => {
   const tmp = Deno.makeTempFileSync({ prefix: "rw_cfg_" });
   try {
-    fs.writeFileSync(tmp, "r-libs-user=/some/path\nsandbox=webr\n");
+    fs.writeFileSync(tmp, "r-libs-user=/some/path\nruntime=deno:webr\n");
     const cfg = load_rwconfig(tmp);
     assertEquals(cfg["r-libs-user"], "/some/path");
-    assertEquals(cfg["sandbox"], "webr");
+    assertEquals(cfg["runtime"], "deno:webr");
   } finally {
     fs.unlinkSync(tmp);
   }
@@ -528,9 +549,9 @@ Deno.test("write_rwconfig: creates file with new field", () => {
   const tmp = Deno.makeTempFileSync({ prefix: "rw_cfg_" });
   fs.writeFileSync(tmp, "");
   try {
-    write_rwconfig("sandbox", "webr", tmp);
+    write_rwconfig("runtime", "deno:webr", tmp);
     const cfg = load_rwconfig(tmp);
-    assertEquals(cfg["sandbox"], "webr");
+    assertEquals(cfg["runtime"], "deno:webr");
   } finally {
     fs.unlinkSync(tmp);
   }
@@ -538,11 +559,11 @@ Deno.test("write_rwconfig: creates file with new field", () => {
 
 Deno.test("write_rwconfig: updates existing field", () => {
   const tmp = Deno.makeTempFileSync({ prefix: "rw_cfg_" });
-  fs.writeFileSync(tmp, "sandbox=webr\n");
+  fs.writeFileSync(tmp, "runtime=deno:webr\n");
   try {
-    write_rwconfig("sandbox", "docker", tmp);
+    write_rwconfig("runtime", "node:webr", tmp);
     const cfg = load_rwconfig(tmp);
-    assertEquals(cfg["sandbox"], "docker");
+    assertEquals(cfg["runtime"], "node:webr");
     // Should still be exactly one entry
     assertEquals(Object.keys(cfg).length, 1);
   } finally {
@@ -552,11 +573,11 @@ Deno.test("write_rwconfig: updates existing field", () => {
 
 Deno.test("write_rwconfig: preserves existing fields when adding new one", () => {
   const tmp = Deno.makeTempFileSync({ prefix: "rw_cfg_" });
-  fs.writeFileSync(tmp, "sandbox=webr\n");
+  fs.writeFileSync(tmp, "runtime=deno:webr\n");
   try {
     write_rwconfig("r-libs-user", "/my/lib", tmp);
     const cfg = load_rwconfig(tmp);
-    assertEquals(cfg["sandbox"], "webr");
+    assertEquals(cfg["runtime"], "deno:webr");
     assertEquals(cfg["r-libs-user"], "/my/lib");
   } finally {
     fs.unlinkSync(tmp);
@@ -565,12 +586,12 @@ Deno.test("write_rwconfig: preserves existing fields when adding new one", () =>
 
 Deno.test("unset_rwconfig: removes an existing field", () => {
   const tmp = Deno.makeTempFileSync({ prefix: "rw_cfg_" });
-  fs.writeFileSync(tmp, "sandbox=webr\nr-libs-user=/path\n");
+  fs.writeFileSync(tmp, "runtime=deno:webr\nr-libs-user=/path\n");
   try {
-    const removed = unset_rwconfig("sandbox", tmp);
+    const removed = unset_rwconfig("runtime", tmp);
     assertEquals(removed, true);
     const cfg = load_rwconfig(tmp);
-    assertEquals(Object.prototype.hasOwnProperty.call(cfg, "sandbox"), false);
+    assertEquals(Object.prototype.hasOwnProperty.call(cfg, "runtime"), false);
     assertEquals(cfg["r-libs-user"], "/path");
   } finally {
     fs.unlinkSync(tmp);
@@ -579,7 +600,7 @@ Deno.test("unset_rwconfig: removes an existing field", () => {
 
 Deno.test("unset_rwconfig: returns false for missing field", () => {
   const tmp = Deno.makeTempFileSync({ prefix: "rw_cfg_" });
-  fs.writeFileSync(tmp, "sandbox=webr\n");
+  fs.writeFileSync(tmp, "runtime=deno:webr\n");
   try {
     const removed = unset_rwconfig("r-libs-user", tmp);
     assertEquals(removed, false);
@@ -589,7 +610,7 @@ Deno.test("unset_rwconfig: returns false for missing field", () => {
 });
 
 Deno.test("unset_rwconfig: returns false when file does not exist", () => {
-  const removed = unset_rwconfig("sandbox", "/nonexistent/.rwconfig");
+  const removed = unset_rwconfig("runtime", "/nonexistent/.rwconfig");
   assertEquals(removed, false);
 });
 
@@ -749,8 +770,8 @@ Deno.test("parse_args: 'config set <field> <value> extra' throws", () => {
         "--no-config",
         "config",
         "set",
-        "sandbox",
-        "webr",
+        "runtime",
+        "deno:webr",
         "extra",
       ]),
     Error,
@@ -767,13 +788,13 @@ Deno.test("parse_args: 'build --docker <path> extra' throws", () => {
 });
 
 // ---------------------------------------------------------------------------
-// parse_args — sandbox-opt shims: empty strings filtered out
+// parse_args — runtime-opt shims: empty strings filtered out
 // ---------------------------------------------------------------------------
 
-Deno.test("parse_args: --sandbox-opt shims trailing comma filters empty", () => {
+Deno.test("parse_args: --runtime-opt shims trailing comma filters empty", () => {
   const { options } = parse_clean([
     "--no-config",
-    "--sandbox-opt=shims=webr::install,",
+    "--runtime-opt=shims=webr::install,",
     "--expr=1",
   ]);
   // "webr::install," splits to ["webr::install", ""] — empty entry removed
