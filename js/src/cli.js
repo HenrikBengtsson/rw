@@ -172,7 +172,16 @@ function validate_runtime(value) {
  */
 function spawn_worker_proc(cmd, args, spec_json, timeout_s) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(cmd, args, { stdio: ["pipe", "inherit", "inherit"] });
+    // Pass only vars needed by the Deno runtime — not the full environment,
+    // since the worker executes untrusted R code.
+    const WORKER_ENV_ALLOWLIST = [
+      "PATH", "HOME", "TMPDIR", "TMP", "TEMP",
+      "DENO_DIR", "DENO_NO_UPDATE_CHECK",
+    ];
+    const env = Object.fromEntries(
+      WORKER_ENV_ALLOWLIST.flatMap(k => process.env[k] !== undefined ? [[k, process.env[k]]] : [])
+    );
+    const proc = spawn(cmd, args, { stdio: ["pipe", "inherit", "inherit"], env });
     proc.stdin.write(spec_json, "utf8");
     proc.stdin.end();
     let kill_timer = null;
