@@ -268,6 +268,23 @@ Deno.test({
 });
 
 Deno.test({
+  name: 'rw --allow-run=deno readLines("https://...") succeeds',
+  sanitizeResources: false,
+  sanitizeOps: false,
+  timeout: 200_000,
+  async fn() {
+    const { code, stdout, stderr } = await rw([
+      "--no-config",
+      "--allow-run=deno",
+      "--expr=x <- readLines('https://www.r-project.org')",
+      "--expr=cat(length(x) > 0)",
+    ]);
+    assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
+    assert(stdout.includes("TRUE"), `Expected TRUE in stdout:\n${stdout}`);
+  },
+});
+
+Deno.test({
   name: "rw env list",
   sanitizeResources: false,
   sanitizeOps: false,
