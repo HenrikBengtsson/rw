@@ -176,11 +176,13 @@ function spawn_worker_proc(cmd, args, spec_json, timeout_s) {
     // since the worker executes untrusted R code.
     const WORKER_ENV_ALLOWLIST = [
       "PATH", "HOME", "TMPDIR", "TMP", "TEMP",
-      "DENO_DIR", "DENO_NO_UPDATE_CHECK",
+      "DENO_DIR",
     ];
     const env = Object.fromEntries(
       WORKER_ENV_ALLOWLIST.flatMap(k => process.env[k] !== undefined ? [[k, process.env[k]]] : [])
     );
+    env["DENO_NO_UPDATE_CHECK"] = "1";
+    env["DENO_NO_PROMPT"] = "1";
     const proc = spawn(cmd, args, { stdio: ["pipe", "inherit", "inherit"], env });
     proc.stdin.write(spec_json, "utf8");
     proc.stdin.end();
