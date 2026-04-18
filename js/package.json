@@ -1,6 +1,6 @@
 {
   "name": "@henrikbengtsson/rw",
-  "version": "0.0.300",
+  "version": "0.0.301",
   "description": "CLI for R with Multi-Runtime Support",
   "keywords": [
     "webR",
@@ -26,7 +26,7 @@
   "license": "MIT",
   "dependencies": {
     "webr": "^0.5.8",
-    "ws": "^8.18.3"
+    "ws": "^8.20.0"
   },
   "main": "index.js",
   "exports": {

@@ -5,7 +5,7 @@
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "npm:webr@*": "0.5.8",
     "npm:webr@~0.5.8": "0.5.8",
-    "npm:ws@^8.18.3": "8.20.0"
+    "npm:ws@^8.20.0": "8.20.0"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -621,7 +621,7 @@
     "packageJson": {
       "dependencies": [
         "npm:webr@~0.5.8",
-        "npm:ws@^8.18.3"
+        "npm:ws@^8.20.0"
       ]
     }
   }
