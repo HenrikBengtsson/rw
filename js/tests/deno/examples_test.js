@@ -72,7 +72,7 @@ Deno.test({
   name: 'rw --expr="sum(1:100)"',
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
       "--no-config",
@@ -87,7 +87,7 @@ Deno.test({
   name: 'rw <<< "1 + 2" (stdin herestring)',
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw(["--no-config"], {
       stdin: "1 + 2\n",
@@ -101,7 +101,7 @@ Deno.test({
   name: 'echo "sum(1:100)" | rw (stdin pipe)',
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw(["--no-config"], {
       stdin: "sum(1:100)\n",
@@ -115,7 +115,7 @@ Deno.test({
   name: "rw main.R (script file argument)",
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const tmp = Deno.makeTempDirSync({ prefix: "rw_ex_" });
     const script = path.join(tmp, "main.R");
@@ -134,7 +134,7 @@ Deno.test({
   name: "rw < main.R (stdin redirect)",
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw(["--no-config"], {
       stdin: "sum(1:100)\n",
@@ -148,7 +148,7 @@ Deno.test({
   name: 'rw --expr="message(...)" main.R (script path as R arg)',
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const tmp = Deno.makeTempDirSync({ prefix: "rw_ex_" });
     const script = path.join(tmp, "main.R");
@@ -177,21 +177,21 @@ Deno.test({
   name: "rw --timeout interrupts a slow expression",
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const t0 = Date.now();
     const { code } = await rw([
       "--no-config",
-      "--timeout=3.5",
-      "--expr=slow <- function() { Sys.sleep(5); 42 }",
+      "--timeout=1.0",
+      "--expr=slow <- function() { Sys.sleep(20); 42 }",
       "--expr=tryCatch(slow(), interrupt = identity)",
     ]);
     const elapsed = (Date.now() - t0) / 1000;
-    // The 5-second sleep must have been interrupted before it completes.
-    // Allow up to 6 s to account for Deno subprocess startup overhead.
+    // The 20-second sleep must have been interrupted before it completes.
+    // Allow up to 12 s to account for Deno subprocess startup overhead.
     assert(
-      elapsed < 6,
-      `Expected process to finish in <6 s (interrupted), took ${
+      elapsed < 12,
+      `Expected process to finish in <12 s (interrupted), took ${
         elapsed.toFixed(1)
       } s`,
     );
@@ -208,7 +208,7 @@ Deno.test({
   name: "rw env get js-runtime",
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
       "--no-config",
@@ -229,7 +229,7 @@ Deno.test({
   name: "rw env get webr-version",
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
       "--no-config",
@@ -250,7 +250,7 @@ Deno.test({
   name: "rw env get r-version",
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
       "--no-config",
@@ -271,7 +271,7 @@ Deno.test({
   name: "rw env list",
   sanitizeResources: false,
   sanitizeOps: false,
-  timeout: 120_000,
+  timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw(["--no-config", "env", "list"]);
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);

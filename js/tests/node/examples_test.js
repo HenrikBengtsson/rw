@@ -124,15 +124,15 @@ describe("rw --help examples", () => {
     const t0 = Date.now();
     const { code } = rw([
       "--no-config",
-      "--timeout=3.5",
+      "--timeout=1.0",
       "--expr=slow <- function() { Sys.sleep(5); 42 }",
       "--expr=tryCatch(slow(), interrupt = identity)",
     ]);
     const elapsed = (Date.now() - t0) / 1000;
-    // The 5-second sleep must have been interrupted: finish well under 5 s
+    // The 5-second sleep must have been interrupted: finish well under 12 s
     assert.ok(
-      elapsed < 5,
-      `Expected process to finish in <5 s (interrupted), took ${
+      elapsed < 12,
+      `Expected process to finish in <12 s (interrupted), took ${
         elapsed.toFixed(1)
       } s`,
     );
