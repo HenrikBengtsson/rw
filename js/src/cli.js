@@ -160,6 +160,44 @@ function validate_runtime(value) {
 }
 
 /**
+ * Spawn a worker process, writing spec_json to its stdin.
+ * If timeout_s > 0, kills the process after (timeout_s + 5) seconds as a
+ * backstop for cases where the R-level interrupt cannot be delivered (e.g. a
+ * deadlock inside a webR Worker caused by a missing Deno permission).
+ * @param {string} cmd
+ * @param {string[]} args
+ * @param {string} spec_json
+ * @param {number} timeout_s
+ * @returns {Promise<number>} Worker exit code
+ */
+function spawn_worker_proc(cmd, args, spec_json, timeout_s) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(cmd, args, { stdio: ["pipe", "inherit", "inherit"] });
+    proc.stdin.write(spec_json, "utf8");
+    proc.stdin.end();
+    let kill_timer = null;
+    let killed_by_timeout = false;
+    if (timeout_s > 0) {
+      kill_timer = setTimeout(() => {
+        killed_by_timeout = true;
+        proc.kill();
+      }, (timeout_s + 5) * 1000);
+    }
+    proc.on("error", (e) => { if (kill_timer) clearTimeout(kill_timer); reject(e); });
+    proc.on("close", (code) => {
+      if (kill_timer) clearTimeout(kill_timer);
+      if (killed_by_timeout) {
+        process.stderr.write(
+          `ERROR: rw worker process killed after ${timeout_s + 5} seconds` +
+          ` (--timeout=${timeout_s} s + 5 s grace; R-level interrupt was not delivered)\n`
+        );
+      }
+      resolve(code ?? 0);
+    });
+  });
+}
+
+/**
  * Spawn the worker under Node.js.
  * The child inherits the parent process's capabilities — no privilege
  * separation, but correct for plain Node.js usage.
@@ -168,15 +206,8 @@ function validate_runtime(value) {
  * @returns {Promise<number>} Worker exit code
  */
 async function node_spawn_worker(worker_path, spec) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn("node", [worker_path], {
-      stdio: ["pipe", "inherit", "inherit"],
-    });
-    proc.stdin.write(JSON.stringify(spec), "utf8");
-    proc.stdin.end();
-    proc.on("error", reject);
-    proc.on("close", (code) => resolve(code ?? 0));
-  });
+  const timeout_s = spec.options?.timeout || 0;
+  return spawn_worker_proc("node", [worker_path], JSON.stringify(spec), timeout_s);
 }
 
 /**
@@ -279,15 +310,8 @@ async function deno_spawn_worker(worker_path, spec) {
     );
   }
 
-  return new Promise((resolve, reject) => {
-    const proc = spawn("deno", args, {
-      stdio: ["pipe", "inherit", "inherit"],
-    });
-    proc.stdin.write(JSON.stringify(spec), "utf8");
-    proc.stdin.end();
-    proc.on("error", reject);
-    proc.on("close", (code) => resolve(code ?? 0));
-  });
+  const timeout_s = spec.options?.timeout || 0;
+  return spawn_worker_proc("deno", args, JSON.stringify(spec), timeout_s);
 }
 
 /**
