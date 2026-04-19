@@ -3,8 +3,8 @@
   "specifiers": {
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/internal@^1.0.12": "1.0.12",
-    "npm:webr@*": "0.5.8",
-    "npm:webr@~0.5.8": "0.5.8",
+    "npm:webr@*": "0.5.9",
+    "npm:webr@~0.5.9": "0.5.9",
     "npm:ws@^8.20.0": "8.20.0"
   },
   "jsr": {
@@ -70,8 +70,8 @@
         "@marijn/find-cluster-break"
       ]
     },
-    "@codemirror/view@6.41.0": {
-      "integrity": "sha512-6H/qadXsVuDY219Yljhohglve8xf4B8xJkVOEWfA5uiYKiTFppjqsvsfR5iPA0RbvRBoOyTZpbLIxe9+0UR8xA==",
+    "@codemirror/view@6.41.1": {
+      "integrity": "sha512-ToDnWKbBnke+ZLrP6vgTTDScGi5H37YYuZGniQaBzxMVdtCxMrslsmtnOvbPZk4RX9bvkQqnWR/WS/35tJA0qg==",
       "dependencies": [
         "@codemirror/state",
         "crelt",
@@ -218,8 +218,8 @@
         "@lezer/common"
       ]
     },
-    "@lezer/lr@1.4.8": {
-      "integrity": "sha512-bPWa0Pgx69ylNlMlPvBPryqeLYQjyJjqPx+Aupm5zydLIF3NE+6MMLT8Yi23Bd9cif9VS00aUebn+6fDIGBcDA==",
+    "@lezer/lr@1.4.10": {
+      "integrity": "sha512-rnCpTIBafOx4mRp43xOxDJbFipJm/c0cia/V5TiGlhmMa+wsSdoGmUN3w5Bqrks/09Q/D4tNAmWaT8p6NRi77A==",
       "dependencies": [
         "@lezer/common"
       ]
@@ -314,8 +314,8 @@
       "os": ["darwin"],
       "scripts": true
     },
-    "get-tsconfig@4.13.7": {
-      "integrity": "sha512-7tN6rFgBlMgpBML5j8typ92BKFi2sFQvIdpAqLA2beia5avZDrMs0FLZiM5etShWq5irVyGcGMEA1jcDaK7A/Q==",
+    "get-tsconfig@4.14.0": {
+      "integrity": "sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==",
       "dependencies": [
         "resolve-pkg-maps"
       ]
@@ -571,8 +571,8 @@
     "w3c-keyname@2.2.8": {
       "integrity": "sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ=="
     },
-    "webr@0.5.8": {
-      "integrity": "sha512-UoDO0MmBe5j+8f4vUHNVbEgMcCYNEQM44gfK9dpJwLxIj4VpmaHesy/Cy2JSo5HRxC9tMYkqcu5US5qlJOEtNw==",
+    "webr@0.5.9": {
+      "integrity": "sha512-Hzg6AK7+GiegMz+nrHZQLWA3q3F5Ku6WNkuUPqQN2yJXYFtRXdikMebfXUXu5MAixvoeXzWXu+bZQhJgxuz1Jg==",
       "dependencies": [
         "@codemirror/autocomplete",
         "@codemirror/commands",
@@ -620,7 +620,7 @@
     ],
     "packageJson": {
       "dependencies": [
-        "npm:webr@~0.5.8",
+        "npm:webr@~0.5.9",
         "npm:ws@^8.20.0"
       ]
     }
