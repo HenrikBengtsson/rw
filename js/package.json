@@ -25,7 +25,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "webr": "^0.5.8",
+    "webr": "^0.5.9",
     "ws": "^8.20.0"
   },
   "main": "index.js",
