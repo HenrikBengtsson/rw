@@ -57,6 +57,48 @@ Deno.test({
 });
 
 Deno.test({
+  name: "ALL_PROXY passed via --env flag",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const key = "ALL_PROXY";
+    const val = "socks5h://test:yolo@ws.r-universe.dev:443";
+    Deno.env.set(key, val);
+    try {
+      const { code, stdout, stderr } = await rw([
+        "--allow-net=ws.r-universe.dev:443",
+        "--persistent",
+        `--env=${key}`,
+        "--expr=curl::has_internet()",
+      ]);
+      
+      assertEquals(code, 0, `Expected exit code 0, got ${code}. Stderr: ${stderr}`);
+      assert(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
+    } finally {
+      Deno.env.delete(key);
+    }
+  },
+});
+
+Deno.test({
+  name: 'ALL_PROXY passed via --env="VAR=value" flag',
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const val = "socks5h://test:yolo@ws.r-universe.dev:443";
+    const { code, stdout, stderr } = await rw([
+      "--allow-net=ws.r-universe.dev:443",
+      "--persistent",
+      `--env=ALL_PROXY=${val}`,
+      "--expr=curl::has_internet()",
+    ]);
+    
+    assertEquals(code, 0, `Expected exit code 0, got ${code}. Stderr: ${stderr}`);
+    assert(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
+  },
+});
+
+Deno.test({
   name: "--persistent does NOT automatically set --allow-net",
   sanitizeResources: false,
   sanitizeOps: false,

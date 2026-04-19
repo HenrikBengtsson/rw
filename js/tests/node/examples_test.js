@@ -28,6 +28,7 @@ const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
  * @param {string[]} args  CLI arguments
  * @param {Object}   opts
  * @param {string}   [opts.stdin]  Data written to stdin
+ * @param {Object}   [opts.env]    Environment variables
  * @returns {{ code: number, stdout: string, stderr: string }}
  */
 function rw(args = [], opts = {}) {
@@ -35,6 +36,7 @@ function rw(args = [], opts = {}) {
     input: opts.stdin,
     encoding: "utf8",
     timeout: 120_000,
+    env: { ...process.env, ...opts.env },
   });
   return {
     code: result.status ?? 1,
@@ -210,6 +212,31 @@ describe("rw --help examples", () => {
     const { code, stdout, stderr } = rw(["--persistent"], {
       stdin: 'Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
     });
+    assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
+    assert.ok(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
+  });
+
+  it("ALL_PROXY passed via --env flag", () => {
+    const key = "ALL_PROXY";
+    const val = "socks5h://test:yolo@ws.r-universe.dev:443";
+    const { code, stdout, stderr } = rw([
+      "--persistent",
+      `--env=${key}`,
+      "--expr=curl::has_internet()",
+    ], {
+      env: { [key]: val }
+    });
+    assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
+    assert.ok(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
+  });
+
+  it('ALL_PROXY passed via --env="VAR=value" flag', () => {
+    const val = "socks5h://test:yolo@ws.r-universe.dev:443";
+    const { code, stdout, stderr } = rw([
+      "--persistent",
+      `--env=ALL_PROXY=${val}`,
+      "--expr=curl::has_internet()",
+    ]);
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert.ok(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
   });
