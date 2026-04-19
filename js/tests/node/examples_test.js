@@ -205,4 +205,12 @@ describe("rw --help examples", () => {
       `Expected session fields in output:\n${stdout}`,
     );
   });
+
+  it("ALL_PROXY and curl::has_internet()", () => {
+    const { code, stdout, stderr } = rw(["--persistent"], {
+      stdin: 'Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
+    });
+    assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
+    assert.ok(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
+  });
 });

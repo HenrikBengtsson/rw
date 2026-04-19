@@ -17,12 +17,19 @@ const DENO_ARGS = [
   "--runtime=deno:webr",
 ];
 
-async function rw(args = []) {
+async function rw(args = [], opts = {}) {
   const proc = new Deno.Command("deno", {
     args: [...DENO_ARGS, ...args],
     stdout: "piped",
     stderr: "piped",
+    stdin: "piped",
   }).spawn();
+
+  if (opts.stdin) {
+    const writer = proc.stdin.getWriter();
+    await writer.write(new TextEncoder().encode(opts.stdin));
+    await writer.close();
+  }
 
   const out = await proc.output();
   return {
@@ -31,6 +38,23 @@ async function rw(args = []) {
     stderr: new TextDecoder().decode(out.stderr),
   };
 }
+
+Deno.test({
+  name: "ALL_PROXY and curl::has_internet() with --allow-net",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const { code, stdout, stderr } = await rw([
+      "--allow-net=ws.r-universe.dev:443",
+      "--persistent",
+    ], {
+      stdin: 'Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
+    });
+    
+    assertEquals(code, 0, `Expected exit code 0, got ${code}. Stderr: ${stderr}`);
+    assert(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
+  },
+});
 
 Deno.test({
   name: "--persistent does NOT automatically set --allow-net",
