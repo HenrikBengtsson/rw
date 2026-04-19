@@ -18,7 +18,7 @@ const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
  * Run cli.js under Node.js.
  */
 function rw(args = []) {
-  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", ...args], {
+  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", "--no-config", ...args], {
     encoding: "utf8",
     timeout: 120_000,
   });
@@ -55,7 +55,7 @@ describe("--r-libs-user under Node.js", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_rlibs_node_rw_"));
     try {
       const { code, stderr } = rw([
-        "--no-config",
+
         `--r-libs-user=${tmp}`,
         "--expr=cat('test', file='/host/R_LIBS_USER/test.txt')",
       ]);
@@ -75,7 +75,7 @@ describe("--r-libs-user under Node.js", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_rlibs_node_rw_p_"));
     try {
       const { code, stderr } = rw([
-        "--no-config",
+
         "--persistent",
         `--r-libs-user=${tmp}`,
         "--expr=cat('test', file='/host/R_LIBS_USER/test.txt')",
@@ -95,7 +95,7 @@ describe("--r-libs-user under Node.js", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_bind_node_ro_"));
     try {
       const { code, stderr } = rw([
-        "--no-config",
+
         `--bind=${tmp}:/data:ro`,
         "--expr=NULL",
       ]);
@@ -111,7 +111,7 @@ describe("--r-libs-user under Node.js", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_bind_node_rw_"));
     try {
       const { code, stderr } = rw([
-        "--no-config",
+
         `--bind=${tmp}:/data:rw`,
         "--expr=cat('test', file='/data/test.txt')",
       ]);

@@ -1,7 +1,15 @@
 import { assert, assertEquals } from "jsr:@std/assert";
+import * as path from "node:path";
+import * as fs from "node:fs";
 
 const CLI = new URL("../../src/cli.js", import.meta.url).pathname;
 const DENO_CFG = new URL("../../deno.json", import.meta.url).pathname;
+const ROOT = new URL("../..", import.meta.url).pathname;
+
+// Load real r-libs-user from project .rwconfig to ensure curl is available
+const realConfig = fs.readFileSync(path.join(ROOT, ".rwconfig"), "utf8");
+const rLibsMatch = realConfig.match(/r-libs-user=(.+)/);
+const R_LIBS_USER = rLibsMatch ? rLibsMatch[1] : null;
 
 const DENO_ARGS = [
   "run",
@@ -18,8 +26,14 @@ const DENO_ARGS = [
 ];
 
 async function rw(args = [], opts = {}) {
+  // Use explicit --r-libs-user to ensure worker sees it
+  const extraArgs = [];
+  if (R_LIBS_USER && !args.includes("--no-config") && !args.some(a => a.startsWith("--r-libs-user="))) {
+    extraArgs.push(`--r-libs-user=${R_LIBS_USER}`);
+  }
+
   const proc = new Deno.Command("deno", {
-    args: [...DENO_ARGS, ...args],
+    args: [...DENO_ARGS, ...extraArgs, ...args],
     stdout: "piped",
     stderr: "piped",
     stdin: "piped",
@@ -32,6 +46,7 @@ async function rw(args = [], opts = {}) {
   }
 
   const out = await proc.output();
+  
   return {
     code: out.code,
     stdout: new TextDecoder().decode(out.stdout),

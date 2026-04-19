@@ -16,7 +16,7 @@ const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
  * Run cli.js under Node.js.
  */
 function rw(args = []) {
-  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", ...args], {
+  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", "--no-config", ...args], {
     encoding: "utf8",
     timeout: 120_000,
   });
@@ -48,7 +48,7 @@ describe("--bind and --bastion under Node.js", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_bind_rw_node_"));
     try {
       const { code, stderr } = rw([
-        "--no-config",
+
         `--bind=${tmp}:/data:rw`,
         "--expr=cat('test', file='/data/test.txt')",
       ]);
@@ -65,7 +65,7 @@ describe("--bind and --bastion under Node.js", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_bastion_ro_node_"));
     try {
       const { code, stderr } = rw([
-        "--no-config",
+
         `--bastion=${tmp}:ro`,
         "--expr=NULL",
       ]);
@@ -81,7 +81,7 @@ describe("--bind and --bastion under Node.js", () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_bastion_rw_node_"));
     try {
       const { code, stderr } = rw([
-        "--no-config",
+
         `--bastion=${tmp}:rw`,
         `--prologue-expr=cat('test', file='/host/bastion/test.txt')`,
         `--expr=NULL`

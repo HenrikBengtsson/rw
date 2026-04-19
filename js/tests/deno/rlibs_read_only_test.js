@@ -21,6 +21,7 @@ const DENO_ARGS = [
   "--config",
   DENO_CFG,
   CLI,
+  "--no-config",
   "--runtime=deno:webr",
 ];
 
@@ -48,7 +49,7 @@ Deno.test({
     const tmp = Deno.makeTempDirSync({ prefix: "rw_rlibs_ro_" });
     try {
       const { code, stderr } = await rw([
-        "--no-config",
+
         `--r-libs-user=${tmp}`,
         "--expr=cat('test', file='/host/R_LIBS_USER/test.txt')",
       ]);
@@ -80,7 +81,7 @@ Deno.test({
     const tmp = Deno.makeTempDirSync({ prefix: "rw_rlibs_rw_" });
     try {
       const { code, stderr } = await rw([
-        "--no-config",
+
         "--persistent",
         `--r-libs-user=${tmp}`,
         "--expr=cat('test', file='/host/R_LIBS_USER/test.txt')",
@@ -108,7 +109,7 @@ Deno.test({
     const tmp = Deno.makeTempDirSync({ prefix: "rw_bind_ro_" });
     try {
       const { code, stderr } = await rw([
-        "--no-config",
+
         `--bind=${tmp}:/data:ro`,
         "--expr=cat('test', file='/data/test.txt')",
       ]);
@@ -137,7 +138,7 @@ Deno.test({
     const tmp = Deno.makeTempDirSync({ prefix: "rw_bind_rw_" });
     try {
       const { code, stderr } = await rw([
-        "--no-config",
+
         `--bind=${tmp}:/data:rw`,
         "--expr=cat('test', file='/data/test.txt')",
       ]);
@@ -164,7 +165,7 @@ Deno.test({
     try {
       // Epilogue attempt to write to read-only bastion
       const { code, stderr } = await rw([
-        "--no-config",
+
         `--bastion=${tmp}:ro`,
         "--expr=1",
         "--epilogue-expr=cat('test', file='/host/bastion/test.txt')",
@@ -194,7 +195,7 @@ Deno.test({
     const tmp = Deno.makeTempDirSync({ prefix: "rw_bastion_rw_" });
     try {
       const { code, stderr } = await rw([
-        "--no-config",
+
         `--bastion=${tmp}`,
         "--expr=1",
         "--epilogue-expr=cat('test', file='/host/bastion/test.txt')",

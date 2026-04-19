@@ -32,6 +32,7 @@ const DENO_ARGS = [
   "--config",
   DENO_CFG,
   CLI,
+  "--no-config",
   "--runtime=deno:webr",
 ];
 
@@ -75,7 +76,6 @@ Deno.test({
   timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
-      "--no-config",
       "--expr=sum(1:100)",
     ]);
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
@@ -89,7 +89,7 @@ Deno.test({
   sanitizeOps: false,
   timeout: 200_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config"], {
+    const { code, stdout, stderr } = await rw([], {
       stdin: "1 + 2\n",
     });
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
@@ -103,7 +103,7 @@ Deno.test({
   sanitizeOps: false,
   timeout: 200_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config"], {
+    const { code, stdout, stderr } = await rw([], {
       stdin: "sum(1:100)\n",
     });
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
@@ -121,7 +121,7 @@ Deno.test({
     const script = path.join(tmp, "main.R");
     try {
       fs.writeFileSync(script, "sum(1:100)\n");
-      const { code, stdout, stderr } = await rw(["--no-config", script]);
+      const { code, stdout, stderr } = await rw([script]);
       assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
       assert(stdout.includes("5050"), `Expected 5050 in stdout:\n${stdout}`);
     } finally {
@@ -136,7 +136,7 @@ Deno.test({
   sanitizeOps: false,
   timeout: 200_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config"], {
+    const { code, stdout, stderr } = await rw([], {
       stdin: "sum(1:100)\n",
     });
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
@@ -157,7 +157,6 @@ Deno.test({
       // The script path is passed as a command-line argument to R
       // (commandArgs(trailingOnly=TRUE)), not executed.  --expr is the main code.
       const { code, stdout, stderr } = await rw([
-        "--no-config",
         "--expr=message('running script ...')",
         script,
       ]);
@@ -181,7 +180,6 @@ Deno.test({
   async fn() {
     const t0 = Date.now();
     const { code } = await rw([
-      "--no-config",
       "--timeout=1.0",
       "--expr=slow <- function() { Sys.sleep(20); 42 }",
       "--expr=tryCatch(slow(), interrupt = identity)",
@@ -211,7 +209,6 @@ Deno.test({
   timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
-      "--no-config",
       "env",
       "get",
       "js-runtime",
@@ -232,7 +229,6 @@ Deno.test({
   timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
-      "--no-config",
       "env",
       "get",
       "webr-version",
@@ -253,7 +249,6 @@ Deno.test({
   timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
-      "--no-config",
       "env",
       "get",
       "r-version",
@@ -274,7 +269,6 @@ Deno.test({
   timeout: 200_000,
   async fn() {
     const { code, stdout, stderr } = await rw([
-      "--no-config",
       "--allow-run=deno",
       "--expr=x <- readLines('https://www.r-project.org')",
       "--expr=cat(length(x) > 0)",
@@ -290,7 +284,7 @@ Deno.test({
   sanitizeOps: false,
   timeout: 200_000,
   async fn() {
-    const { code, stdout, stderr } = await rw(["--no-config", "env", "list"]);
+    const { code, stdout, stderr } = await rw(["env", "list"]);
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert(
       stdout.includes("r_version:x_y_z="),

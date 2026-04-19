@@ -46,6 +46,7 @@ async function rw(r_code) {
       "--config",
       DENO_CFG,
       CLI,
+      "--no-config",
       "--runtime=deno:webr",
     ],
     stdin: "piped",

@@ -39,6 +39,9 @@ export const license = package_json.license;
  * @throws {Error} If path does not exist
  */
 export function normalize_path(file, type = "host directory") {
+  if (file === null || file === undefined) {
+    throw new Error(`INTERNAL ERROR: normalize_path called with ${file} for type '${type}'`);
+  }
   // Expand leading ~ to home directory
   if (file === "~") {
     file = os.homedir();
@@ -259,7 +262,7 @@ export class RwSession {
       );
     }
     await this.mkdirs(webr_path);
-    await this.webR.FS.mount("NODEFS", { root: host_path }, webr_path);
+    await this.webR.FS.mount("NODEFS", { root: host_path, readonly }, webr_path);
   }
 
   /**
@@ -559,30 +562,26 @@ export async function run(options = {}) {
 
     // For 'install' task, we might have local tarballs in exprs.
     // We need to mount their parent directories so webR can see them.
-    const mounted_dirs = new Set();
+    const dir_to_mount = new Map(); // dir -> mount_point
     if (options.task === "install") {
-      for (const expr of exprs) {
+      for (let i = 0; i < exprs.length; i++) {
+        const expr = exprs[i];
         const match = expr.match(/install\.packages\("([^"]+\.(tgz|tar\.gz))"\)/);
         if (match) {
           const pkg_path = match[1];
           if (fs.existsSync(pkg_path)) {
             const abs_path = path.resolve(pkg_path);
             const dir = path.dirname(abs_path);
-            if (!mounted_dirs.has(dir)) {
-              // We mount it as /host/pkg-N to avoid collisions
-              const mount_point = `/host/pkg-${mounted_dirs.size}`;
+            let mount_point = dir_to_mount.get(dir);
+            if (!mount_point) {
+              mount_point = `/host/pkg-${dir_to_mount.size}`;
               if (debug) console.log(`Mounting ${dir} to ${mount_point} for local package install`);
-              await session.mount(dir, mount_point);
-              mounted_dirs.add(dir);
-              
-              // We need to update the expression to use the mounted path
-              const filename = path.basename(abs_path);
-              const new_expr = `install.packages("${mount_point}/${filename}")`;
-              exprs[exprs.indexOf(expr)] = new_expr;
-            } else {
-               // Already mounted, just find where
-               // This is a bit complex, let's just mount once for now or use a Map
+              await session.mount(dir, mount_point, true); // read-only
+              dir_to_mount.set(dir, mount_point);
             }
+            
+            const filename = path.basename(abs_path);
+            exprs[i] = `install.packages("${mount_point}/${filename}")`;
           }
         }
       }

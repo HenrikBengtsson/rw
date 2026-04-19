@@ -22,6 +22,12 @@ import { fileURLToPath } from "node:url";
 // ---------------------------------------------------------------------------
 
 const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
+const ROOT = fileURLToPath(new URL("../..", import.meta.url));
+
+// Load real r-libs-user from project .rwconfig to ensure curl is available
+const realConfig = fs.readFileSync(path.join(ROOT, ".rwconfig"), "utf8");
+const rLibsMatch = realConfig.match(/r-libs-user=(.+)/);
+const R_LIBS_USER = rLibsMatch ? rLibsMatch[1] : null;
 
 /**
  * Run cli.js under Node.js.
@@ -32,12 +38,18 @@ const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
  * @returns {{ code: number, stdout: string, stderr: string }}
  */
 function rw(args = [], opts = {}) {
-  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", ...args], {
+  const extraArgs = [];
+  if (R_LIBS_USER && !args.includes("--no-config") && !args.some(a => a.startsWith("--r-libs-user="))) {
+    extraArgs.push(`--r-libs-user=${R_LIBS_USER}`);
+  }
+
+  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", ...extraArgs, ...args], {
     input: opts.stdin,
     encoding: "utf8",
     timeout: 120_000,
     env: { ...process.env, ...opts.env },
   });
+
   return {
     code: result.status ?? 1,
     stdout: result.stdout ?? "",
@@ -52,21 +64,21 @@ function rw(args = [], opts = {}) {
 describe("rw --help examples", () => {
   // rw --expr="sum(1:100)"
   it('rw --expr="sum(1:100)"', () => {
-    const { code, stdout, stderr } = rw(["--no-config", "--expr=sum(1:100)"]);
+    const { code, stdout, stderr } = rw(["--expr=sum(1:100)"]);
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert.ok(stdout.includes("5050"), `Expected 5050 in stdout:\n${stdout}`);
   });
 
   // rw <<< "1 + 2"
   it('rw <<< "1 + 2" (stdin herestring)', () => {
-    const { code, stdout, stderr } = rw(["--no-config"], { stdin: "1 + 2\n" });
+    const { code, stdout, stderr } = rw([], { stdin: "1 + 2\n" });
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert.ok(stdout.includes("3"), `Expected 3 in stdout:\n${stdout}`);
   });
 
   // echo "sum(1:100)" | rw
   it('echo "sum(1:100)" | rw (stdin pipe)', () => {
-    const { code, stdout, stderr } = rw(["--no-config"], {
+    const { code, stdout, stderr } = rw([], {
       stdin: "sum(1:100)\n",
     });
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
@@ -75,21 +87,23 @@ describe("rw --help examples", () => {
 
   // rw main.R
   it("rw main.R (script file argument)", () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_ex_"));
-    const script = path.join(tmp, "main.R");
+    const tmp = fs.mkdtempSync(path.join(ROOT, "..", "rw_ex_")); // Stay within workspace or use system tmp
+    // Use system tmp but make it absolute
+    const sysTmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_ex_"));
+    const script = path.join(sysTmp, "main.R");
     try {
       fs.writeFileSync(script, "sum(1:100)\n");
-      const { code, stdout, stderr } = rw(["--no-config", script]);
+      const { code, stdout, stderr } = rw([script]);
       assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
       assert.ok(stdout.includes("5050"), `Expected 5050 in stdout:\n${stdout}`);
     } finally {
-      fs.rmSync(tmp, { recursive: true });
+      fs.rmSync(sysTmp, { recursive: true });
     }
   });
 
   // rw < main.R
   it("rw < main.R (stdin redirect)", () => {
-    const { code, stdout, stderr } = rw(["--no-config"], {
+    const { code, stdout, stderr } = rw([], {
       stdin: "sum(1:100)\n",
     });
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
@@ -98,14 +112,13 @@ describe("rw --help examples", () => {
 
   // rw --expr="message('running script ...')" main.R
   it('rw --expr="message(...)" main.R (script path as R arg)', () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_ex_"));
-    const script = path.join(tmp, "main.R");
+    const sysTmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_ex_"));
+    const script = path.join(sysTmp, "main.R");
     try {
       fs.writeFileSync(script, "print(sum(1:100))\n");
       // The script path is passed as a command-line argument to R
       // (commandArgs(trailingOnly=TRUE)), not executed.  --expr is the main code.
       const { code, stdout, stderr } = rw([
-        "--no-config",
         "--expr=message('running script ...')",
         script,
       ]);
@@ -116,7 +129,7 @@ describe("rw --help examples", () => {
         `Expected message() output, stdout: ${stdout}\nstderr: ${stderr}`,
       );
     } finally {
-      fs.rmSync(tmp, { recursive: true });
+      fs.rmSync(sysTmp, { recursive: true });
     }
   });
 
@@ -125,7 +138,6 @@ describe("rw --help examples", () => {
   it("rw --timeout interrupts a slow expression", () => {
     const t0 = Date.now();
     const { code } = rw([
-      "--no-config",
       "--timeout=1.0",
       "--expr=slow <- function() { Sys.sleep(5); 42 }",
       "--expr=tryCatch(slow(), interrupt = identity)",
@@ -149,7 +161,6 @@ describe("rw --help examples", () => {
   // rw env get js-runtime
   it("rw env get js-runtime", () => {
     const { code, stdout, stderr } = rw([
-      "--no-config",
       "env",
       "get",
       "js-runtime",
@@ -165,7 +176,6 @@ describe("rw --help examples", () => {
   // rw env get webr-version
   it("rw env get webr-version", () => {
     const { code, stdout, stderr } = rw([
-      "--no-config",
       "env",
       "get",
       "webr-version",
@@ -181,7 +191,6 @@ describe("rw --help examples", () => {
   // rw env get r-version
   it("rw env get r-version", () => {
     const { code, stdout, stderr } = rw([
-      "--no-config",
       "env",
       "get",
       "r-version",
@@ -196,7 +205,7 @@ describe("rw --help examples", () => {
 
   // rw env list
   it("rw env list", () => {
-    const { code, stdout, stderr } = rw(["--no-config", "env", "list"]);
+    const { code, stdout, stderr } = rw(["env", "list"]);
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert.ok(
       stdout.includes("r_version:x_y_z="),

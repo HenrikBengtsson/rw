@@ -21,6 +21,7 @@ const DENO_ARGS = [
   "--config",
   DENO_CFG,
   CLI,
+  "--no-config",
   "--runtime=deno:webr",
 ];
 
@@ -49,7 +50,7 @@ Deno.test({
     try {
       // Install 'praise' from CRAN
       const { code, stderr, stdout } = await rw([
-        "--no-config",
+
         "--verbose",
         "--persistent",
         `--r-libs-user=${tmp}`,
@@ -67,7 +68,7 @@ Deno.test({
       
       // Verify we can USE the installed package
       const runRes = await rw([
-        "--no-config",
+
         `--r-libs-user=${tmp}`,
         "--expr=cat(praise::praise())"
       ]);
@@ -95,7 +96,7 @@ Deno.test({
 
       // 2. Uninstall it
       const { code, stderr } = await rw([
-        "--no-config",
+
         "--verbose",
         "--persistent",
         `--r-libs-user=${tmp}`,
