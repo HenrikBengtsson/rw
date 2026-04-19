@@ -9,7 +9,7 @@
  *   make node-examples-tests
  */
 
-import { describe, it } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -22,12 +22,8 @@ import { fileURLToPath } from "node:url";
 // ---------------------------------------------------------------------------
 
 const CLI = fileURLToPath(new URL("../../src/cli.js", import.meta.url));
-const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
-// Load real r-libs-user from project .rwconfig to ensure curl is available
-const realConfig = fs.readFileSync(path.join(ROOT, ".rwconfig"), "utf8");
-const rLibsMatch = realConfig.match(/r-libs-user=(.+)/);
-const R_LIBS_USER = rLibsMatch ? rLibsMatch[1] : null;
+const TEST_LIBS_USER = fs.mkdtempSync(path.join(os.tmpdir(), "rw_node_net_libs_"));
 
 /**
  * Run cli.js under Node.js.
@@ -38,12 +34,7 @@ const R_LIBS_USER = rLibsMatch ? rLibsMatch[1] : null;
  * @returns {{ code: number, stdout: string, stderr: string }}
  */
 function rw(args = [], opts = {}) {
-  const extraArgs = [];
-  if (R_LIBS_USER && !args.includes("--no-config") && !args.some(a => a.startsWith("--r-libs-user="))) {
-    extraArgs.push(`--r-libs-user=${R_LIBS_USER}`);
-  }
-
-  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", ...extraArgs, ...args], {
+  const result = spawnSync(process.execPath, [CLI, "--runtime=node:webr", "--no-config", ...args], {
     input: opts.stdin,
     encoding: "utf8",
     timeout: 120_000,
@@ -62,6 +53,29 @@ function rw(args = [], opts = {}) {
 // ---------------------------------------------------------------------------
 
 describe("rw --help examples", () => {
+  
+  before(() => {
+    // Install 'curl' into the shared temp library once
+    console.error(`Installing 'curl' into ${TEST_LIBS_USER} for Node.js tests ...`);
+    const { code, stderr } = rw([
+      "--persistent",
+      `--r-libs-user=${TEST_LIBS_USER}`,
+      "install",
+      "curl"
+    ]);
+    if (code !== 0) {
+       console.error(`Failed to install curl: ${stderr}`);
+       // We don't throw here to avoid blocking other tests that don't need curl,
+       // but curl-dependent tests will fail.
+    } else {
+       console.error("Install successful.");
+    }
+  });
+
+  after(() => {
+    try { fs.rmSync(TEST_LIBS_USER, { recursive: true }); } catch {}
+  });
+
   // rw --expr="sum(1:100)"
   it('rw --expr="sum(1:100)"', () => {
     const { code, stdout, stderr } = rw(["--expr=sum(1:100)"]);
@@ -87,8 +101,6 @@ describe("rw --help examples", () => {
 
   // rw main.R
   it("rw main.R (script file argument)", () => {
-    const tmp = fs.mkdtempSync(path.join(ROOT, "..", "rw_ex_")); // Stay within workspace or use system tmp
-    // Use system tmp but make it absolute
     const sysTmp = fs.mkdtempSync(path.join(os.tmpdir(), "rw_ex_"));
     const script = path.join(sysTmp, "main.R");
     try {
@@ -218,7 +230,10 @@ describe("rw --help examples", () => {
   });
 
   it("ALL_PROXY and curl::has_internet()", () => {
-    const { code, stdout, stderr } = rw(["--persistent"], {
+    const { code, stdout, stderr } = rw([
+      "--persistent",
+      `--r-libs-user=${TEST_LIBS_USER}`
+    ], {
       stdin: 'Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
     });
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
@@ -230,6 +245,7 @@ describe("rw --help examples", () => {
     const val = "socks5h://test:yolo@ws.r-universe.dev:443";
     const { code, stdout, stderr } = rw([
       "--persistent",
+      `--r-libs-user=${TEST_LIBS_USER}`,
       `--env=${key}`,
       "--expr=curl::has_internet()",
     ], {
@@ -243,6 +259,7 @@ describe("rw --help examples", () => {
     const val = "socks5h://test:yolo@ws.r-universe.dev:443";
     const { code, stdout, stderr } = rw([
       "--persistent",
+      `--r-libs-user=${TEST_LIBS_USER}`,
       `--env=ALL_PROXY=${val}`,
       "--expr=curl::has_internet()",
     ]);

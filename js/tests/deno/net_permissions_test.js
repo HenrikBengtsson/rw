@@ -4,12 +4,6 @@ import * as fs from "node:fs";
 
 const CLI = new URL("../../src/cli.js", import.meta.url).pathname;
 const DENO_CFG = new URL("../../deno.json", import.meta.url).pathname;
-const ROOT = new URL("../..", import.meta.url).pathname;
-
-// Load real r-libs-user from project .rwconfig to ensure curl is available
-const realConfig = fs.readFileSync(path.join(ROOT, ".rwconfig"), "utf8");
-const rLibsMatch = realConfig.match(/r-libs-user=(.+)/);
-const R_LIBS_USER = rLibsMatch ? rLibsMatch[1] : null;
 
 const DENO_ARGS = [
   "run",
@@ -25,15 +19,12 @@ const DENO_ARGS = [
   "--runtime=deno:webr",
 ];
 
-async function rw(args = [], opts = {}) {
-  // Use explicit --r-libs-user to ensure worker sees it
-  const extraArgs = [];
-  if (R_LIBS_USER && !args.includes("--no-config") && !args.some(a => a.startsWith("--r-libs-user="))) {
-    extraArgs.push(`--r-libs-user=${R_LIBS_USER}`);
-  }
+// Create a persistent library for the duration of these tests
+const TEST_LIBS_USER = Deno.makeTempDirSync({ prefix: "rw_net_test_libs_" });
 
+async function rw(args = [], opts = {}) {
   const proc = new Deno.Command("deno", {
-    args: [...DENO_ARGS, ...extraArgs, ...args],
+    args: [...DENO_ARGS, ...args],
     stdout: "piped",
     stderr: "piped",
     stdin: "piped",
@@ -54,12 +45,41 @@ async function rw(args = [], opts = {}) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Setup: Install 'curl' package once
+// ---------------------------------------------------------------------------
+
+Deno.test({
+  name: "Setup: Install 'curl' package",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  ignore: false,
+  async fn() {
+    console.error(`Installing 'curl' into ${TEST_LIBS_USER} ...`);
+    const { code, stderr } = await rw([
+      "--no-config",
+      "--persistent",
+      `--r-libs-user=${TEST_LIBS_USER}`,
+      "install",
+      "curl"
+    ]);
+    assertEquals(code, 0, `Failed to install curl: ${stderr}`);
+    console.error("Install successful.");
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 Deno.test({
   name: "ALL_PROXY and curl::has_internet() with --allow-net",
   sanitizeResources: false,
   sanitizeOps: false,
   async fn() {
     const { code, stdout, stderr } = await rw([
+      "--no-config",
+      `--r-libs-user=${TEST_LIBS_USER}`,
       "--allow-net=ws.r-universe.dev:443",
       "--persistent",
     ], {
@@ -81,6 +101,8 @@ Deno.test({
     Deno.env.set(key, val);
     try {
       const { code, stdout, stderr } = await rw([
+        "--no-config",
+        `--r-libs-user=${TEST_LIBS_USER}`,
         "--allow-net=ws.r-universe.dev:443",
         "--persistent",
         `--env=${key}`,
@@ -102,6 +124,8 @@ Deno.test({
   async fn() {
     const val = "socks5h://test:yolo@ws.r-universe.dev:443";
     const { code, stdout, stderr } = await rw([
+      "--no-config",
+      `--r-libs-user=${TEST_LIBS_USER}`,
       "--allow-net=ws.r-universe.dev:443",
       "--persistent",
       `--env=ALL_PROXY=${val}`,
@@ -183,4 +207,14 @@ Deno.test({
     
     assert(!stderr.includes("--allow-net"), "Should NOT include --allow-net for 'uninstall' command");
   },
+});
+
+// Cleanup TEST_LIBS_USER at the end
+Deno.test({
+  name: "Cleanup",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn() {
+    try { fs.rmSync(TEST_LIBS_USER, { recursive: true }); } catch {}
+  }
 });
