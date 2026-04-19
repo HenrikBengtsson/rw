@@ -212,6 +212,7 @@ export class RwSession {
    * Initialize the webR instance
    * @param {Object} options - Initialization options
    * @param {string[]} options.r_args - Arguments to pass to R
+   * @param {Object<string, string>} [options.env_vars] - Environment variables to set
    * @returns {Promise<RwSession>} This session instance
    */
   async init(options = {}) {
@@ -219,7 +220,8 @@ export class RwSession {
       throw new Error("Session already initialized");
     }
     const r_args = options.r_args || [];
-    this.webR = new WebR({ RArgs: r_args });
+    const env_vars = options.env_vars || {};
+    this.webR = new WebR({ RArgs: r_args, REnv: env_vars });
     await this.webR.init();
     this._initialized = true;
     return this;
@@ -481,16 +483,7 @@ export async function run(options = {}) {
   } = options;
 
   const session = new RwSession({ debug });
-  await session.init({ r_args: webr_args });
-
-  // Set environment variables in R
-  if (Object.keys(env_vars).length > 0) {
-    if (debug) console.log("Setting R environment variables:", env_vars);
-    if (verbose) console.error("Setting R environment variables");
-    for (const [name, value] of Object.entries(env_vars)) {
-      await session.webR.evalRVoid(`Sys.setenv(${name} = ${JSON.stringify(value)})`);
-    }
-  }
+  await session.init({ r_args: webr_args, env_vars });
 
   // Mount R library if specified
   if (r_libs_user) {
