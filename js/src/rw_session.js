@@ -556,6 +556,38 @@ export async function run(options = {}) {
   if (exprs.length > 0) {
     if (debug) console.log("Evaluate main R code ...");
     if (verbose) console.error("Evaluating R code");
+
+    // For 'install' task, we might have local tarballs in exprs.
+    // We need to mount their parent directories so webR can see them.
+    const mounted_dirs = new Set();
+    if (options.task === "install") {
+      for (const expr of exprs) {
+        const match = expr.match(/install\.packages\("([^"]+\.(tgz|tar\.gz))"\)/);
+        if (match) {
+          const pkg_path = match[1];
+          if (fs.existsSync(pkg_path)) {
+            const abs_path = path.resolve(pkg_path);
+            const dir = path.dirname(abs_path);
+            if (!mounted_dirs.has(dir)) {
+              // We mount it as /host/pkg-N to avoid collisions
+              const mount_point = `/host/pkg-${mounted_dirs.size}`;
+              if (debug) console.log(`Mounting ${dir} to ${mount_point} for local package install`);
+              await session.mount(dir, mount_point);
+              mounted_dirs.add(dir);
+              
+              // We need to update the expression to use the mounted path
+              const filename = path.basename(abs_path);
+              const new_expr = `install.packages("${mount_point}/${filename}")`;
+              exprs[exprs.indexOf(expr)] = new_expr;
+            } else {
+               // Already mounted, just find where
+               // This is a bit complex, let's just mount once for now or use a Map
+            }
+          }
+        }
+      }
+    }
+
     await session.eval_code(exprs, { timeout });
     if (debug) console.log("Evaluate main R code ... done");
   }

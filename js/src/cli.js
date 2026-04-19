@@ -231,11 +231,21 @@ async function node_spawn_worker(worker_path, spec) {
 function deno_read_paths(spec) {
   // /dev is needed by webR's Emscripten runtime for stdio setup (/dev/stdin etc.)
   const paths = [__pkgdir, "/dev"];
-  if (spec.task === "run") {
+  if (spec.options) {
     const o = spec.options;
     if (o.r_libs_user) paths.push(o.r_libs_user);
     if (o.bastion_host) paths.push(o.bastion_host);
     for (const bind of (o.binds ?? [])) paths.push(bind.host);
+  }
+  if (spec.task === "install" && spec.install_packages) {
+    for (const pkg of spec.install_packages) {
+      // If it looks like a local path, add it to read paths
+      if (pkg.includes("/") || pkg.endsWith(".tgz") || pkg.endsWith(".tar.gz")) {
+        if (fs.existsSync(pkg)) {
+          paths.push(path.resolve(pkg));
+        }
+      }
+    }
   }
   return paths;
 }
@@ -252,13 +262,13 @@ function deno_write_paths(spec) {
   // even for basic R evaluation (e.g. compiled WASM module caches).
   // /dev is needed by webR's Emscripten runtime for stdio setup (/dev/stdin etc.)
   const paths = [__pkgdir, "/dev"];
-  if (spec.task === "run") {
+  if (spec.options) {
     const o = spec.options;
     const allow_net = [...(o.allow_net || [])];
     if (o.r_libs_user && o.persistent) {
       paths.push(o.r_libs_user);
     }
-    if (o.persistent || allow_net.length > 0) {
+    if (o.persistent || allow_net.length > 0 || spec.task === "install") {
       paths.push("/tmp"); // webR writes temp files during package download/extraction
     }
     if (o.bastion_host && !o.bastion_readonly) {
@@ -305,6 +315,12 @@ async function deno_spawn_worker(worker_path, spec) {
   }
 
   const allow_run = [...(spec.options?.allow_run || [])];
+  // Deno's node:worker_threads implementation often requires the 'deno'
+  // executable to be runnable to spawn worker threads.
+  if (!allow_run.includes("") && !allow_run.includes("deno")) {
+    allow_run.push("deno");
+  }
+
   if (allow_run.length > 0) {
     if (allow_run.includes("")) {
       args.push("--allow-run");
@@ -346,8 +362,9 @@ async function spawn_worker(runtime, spec) {
  * @param {Object} options - Full parsed options from parse_args()
  * @returns {Object} Minimal run spec for the worker
  */
-function make_run_spec(options) {
+function make_run_spec(options, task = "run") {
   return {
+    task,
     debug: options.debug,
     verbose: options.verbose,
     webr_args: options.webr_args,
@@ -1235,7 +1252,8 @@ async function main() {
     try {
       exit_code = await spawn_worker(options.runtime, {
         task: "install",
-        options: make_run_spec(options),
+        install_packages: command.install_packages,
+        options: make_run_spec(options, "install"),
       });
     } catch (e) {
       console.error("ERROR: " + e.message);
@@ -1274,7 +1292,7 @@ async function main() {
     try {
       exit_code = await spawn_worker(options.runtime, {
         task: "uninstall",
-        options: make_run_spec(options),
+        options: make_run_spec(options, "uninstall"),
       });
     } catch (e) {
       console.error("ERROR: " + e.message);
@@ -1304,7 +1322,7 @@ async function main() {
   try {
     exit_code = await spawn_worker(options.runtime, {
       task: "run",
-      options: make_run_spec(options),
+      options: make_run_spec(options, "run"),
     });
   } catch (e) {
     console.error("ERROR: " + e.message);
