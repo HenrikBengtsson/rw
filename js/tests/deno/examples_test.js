@@ -287,6 +287,10 @@ Deno.test({
     const { code, stdout, stderr } = await rw(["env", "list"]);
     assertEquals(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert(
+      stdout.includes("\n"),
+      `Expected newlines in output:\n${stdout}`,
+    );
+    assert(
       stdout.includes("r_version:x_y_z="),
       `Expected r_version in output:\n${stdout}`,
     );

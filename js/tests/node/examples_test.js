@@ -220,6 +220,10 @@ describe("rw --help examples", () => {
     const { code, stdout, stderr } = rw(["env", "list"]);
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert.ok(
+      stdout.includes("\n"),
+      `Expected newlines in output:\n${stdout}`,
+    );
+    assert.ok(
       stdout.includes("r_version:x_y_z="),
       `Expected r_version in output:\n${stdout}`,
     );

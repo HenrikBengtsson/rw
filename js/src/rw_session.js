@@ -634,8 +634,8 @@ export async function get_r_version() {
         captureStreams: true,
       });
       for (const out of res.output) {
-        if (out.type === "stdout") process.stdout.write(out.data);
-        if (out.type === "stderr") process.stderr.write(out.data);
+        if (out.type === "stdout") console.log(out.data);
+        if (out.type === "stderr") console.error(out.data);
       }
     } finally {
       await shelter.purge();
@@ -715,11 +715,11 @@ export async function get_r_info(field = null) {
         '    message(paste(sprintf("  %s", fields), collapse = "\\n"))',
         "} else {",
         "    values <- substring(lines[idx], nchar(prefix) + 1L)",
-        "    writeLines(values)",
+        '    for (v in values) writeLines(v)',
         "}",
       );
     } else {
-      code.push("writeLines(lines)");
+      code.push('for (l in lines) writeLines(l)');
     }
 
     const shelter = await new webR.Shelter();
@@ -728,8 +728,8 @@ export async function get_r_info(field = null) {
         captureStreams: true,
       });
       for (const out of res.output) {
-        if (out.type === "stdout") process.stdout.write(out.data);
-        if (out.type === "stderr") process.stderr.write(out.data);
+        if (out.type === "stdout") console.log(out.data);
+        if (out.type === "stderr") console.error(out.data);
       }
     } finally {
       await shelter.purge();
