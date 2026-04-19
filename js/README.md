@@ -191,6 +191,8 @@ Options (evaluation):
   --expr=[R code]               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
   --timeout=[seconds]           Maximum evaluation time in seconds
+  --env=VAR                     Set environment variable VAR from current environment
+  --env=VAR=value               Set environment variable VAR to value
 
 Examples:
 
@@ -237,9 +239,9 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.300
+Version: 0.0.400
 JS Runtime: deno 2.7.12
-webR: 0.5.8
+webR: 0.5.9
 License: MIT
 Author: Henrik Bengtsson
 ```

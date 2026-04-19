@@ -1,6 +1,6 @@
 {
   "name": "@henrikbengtsson/rw",
-  "version": "0.0.302",
+  "version": "0.0.400",
   "description": "CLI for R with Multi-Runtime Support",
   "keywords": [
     "webR",
