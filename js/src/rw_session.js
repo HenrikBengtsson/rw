@@ -591,87 +591,119 @@ export async function get_webr_version() {
 
 /**
  * Get the R version
- * @returns {Promise<string>} R version
+ * @returns {Promise<void>}
  */
 export async function get_r_version() {
   const webR = new WebR({ RArgs: ["--vanilla"] });
-  await webR.init();
-  await webR.evalR(`cat(as.character(getRversion()))`);
+  try {
+    await webR.init();
+    const shelter = await new webR.Shelter();
+    try {
+      const res = await shelter.captureR(`cat(as.character(getRversion()))`, {
+        captureStreams: true,
+      });
+      for (const out of res.output) {
+        if (out.type === "stdout") process.stdout.write(out.data);
+        if (out.type === "stderr") process.stderr.write(out.data);
+      }
+    } finally {
+      await shelter.purge();
+    }
+  } finally {
+    await webR.close();
+  }
 }
 
 /**
  * Get detailed R configuration info
+ * @param {string|null} field - Field to get, or null for all
  * @returns {Promise<void>} Prints configuration to stdout
  */
 export async function get_r_info(field = null) {
   const webR = new WebR({ RArgs: ["--vanilla"] });
-  await webR.init();
-  const code = [
-    "lines <- c()",
-    "values <- Sys.getenv()",
-    'values <- values[grepl("^R_", names(values))]',
-    'lines <- c(lines, sprintf("envs:%s=%s", names(values), values))',
-    'values <- vapply(.LC.categories, FUN = Sys.getlocale, FUN.VALUE = "")',
-    'lines <- c(lines, sprintf("locale:%s=%s", names(values), values))',
-    "values <- Sys.info()",
-    'values["osVersion"] <- osVersion',
-    'lines <- c(lines, sprintf("sys_info:%s=%s", names(values), values))',
-    "values <- .Platform",
-    'lines <- c(lines, sprintf("platform:%s=%s", names(values), values))',
-    "values <- capabilities()",
-    'lines <- c(lines, sprintf("capabilities:%s=%s", names(values), values))',
-    "values <- R.version",
-    'values["x"] <- paste(unlist(getRversion())[1], collapse = ".")',
-    'values["y"] <- paste(unlist(getRversion())[2], collapse = ".")',
-    'values["z"] <- paste(unlist(getRversion())[3], collapse = ".")',
-    'values["x_y"] <- paste(unlist(getRversion())[1:2], collapse = ".")',
-    'values["x_y_z"] <- as.character(getRversion())',
-    'lines <- c(lines, sprintf("r_version:%s=%s", names(values), values))',
-    "values <- .Machine",
-    'lines <- c(lines, sprintf("machine:%s=%s", names(values), values))',
-    "values <- extSoftVersion()",
-    'lines <- c(lines, sprintf("ext_soft_version:%s=%s", names(values), values))',
-    'components <- c("home", "bin", "doc", "etc", "include", "modules", "share")',
-    'values <- vapply(components, FUN = R.home, FUN.VALUE = "")',
-    'lines <- c(lines, sprintf("r_home:%s=%s", names(values), values))',
-    "values <- rc.options()",
-    'lines <- c(lines, sprintf("readline_options:%s=%s", names(values), values))',
-    "values <- rc.settings()",
-    'lines <- c(lines, sprintf("readline_settings:%s=%s", names(values), values))',
-    'values <- c(interactive = interactive(), home = normalizePath("~"), pwd = getwd(), tempdir = tempdir())',
-    'values <- c(values, rng_kind = paste(RNGkind(), collapse = " "), timezone = Sys.timezone())',
-    'values <- c(values, lib_paths = paste(shQuote(.libPaths()), collapse = " "))',
-    'values <- c(values, loaded_packages = paste(loadedNamespaces(), collapse = " "))',
-    'lines <- c(lines, sprintf("session:%s=%s", names(values), values))',
-    "values <- commandArgs()",
-    'names(values) <- sprintf("%d", seq_along(values))',
-    'lines <- c(lines, sprintf("command_args:%s=%s", names(values), values))',
-    "values <- c(La_library = La_library(), La_version = La_version())",
-    'lines <- c(lines, sprintf("lapack:%s=%s", names(values), values))',
-    "values <- l10n_info()",
-    'lines <- c(lines, sprintf("localization:%s=%s", names(values), values))',
-    'values <- strsplit(Sys.getenv("R_LIBS_USER"), split = ":", fixed = TRUE)[[1]]',
-    'values <- gsub(sprintf("^%s", normalizePath("~")), "~", values)',
-    'lines <- c(lines, sprintf("rw_suggestions:%s=%s", names(values), values))',
-    "lines <- sort(lines)",
-  ];
-  if (field !== null) {
-    code.push(
-      `field <- ${JSON.stringify(field)}`,
-      'prefix <- paste0(field, "=")',
-      "idx <- which(startsWith(lines, prefix))",
-      "if (length(idx) == 0L) {",
-      '    message(sprintf("Unknown --config field: %s", field))',
-      '    message("Available fields:")',
-      '    fields <- sub("=.*", "", lines)',
-      '    message(paste(sprintf("  %s", fields), collapse = "\\n"))',
-      "} else {",
-      "    values <- substring(lines[idx], nchar(prefix) + 1L)",
-      "    writeLines(values)",
-      "}",
-    );
-  } else {
-    code.push("writeLines(lines)");
+  try {
+    await webR.init();
+    const code = [
+      "lines <- c()",
+      "values <- Sys.getenv()",
+      'values <- values[grepl("^R_", names(values))]',
+      'lines <- c(lines, sprintf("envs:%s=%s", names(values), values))',
+      'values <- vapply(.LC.categories, FUN = Sys.getlocale, FUN.VALUE = "")',
+      'lines <- c(lines, sprintf("locale:%s=%s", names(values), values))',
+      "values <- Sys.info()",
+      'values["osVersion"] <- osVersion',
+      'lines <- c(lines, sprintf("sys_info:%s=%s", names(values), values))',
+      "values <- .Platform",
+      'lines <- c(lines, sprintf("platform:%s=%s", names(values), values))',
+      "values <- capabilities()",
+      'lines <- c(lines, sprintf("capabilities:%s=%s", names(values), values))',
+      "values <- R.version",
+      'values["x"] <- paste(unlist(getRversion())[1], collapse = ".")',
+      'values["y"] <- paste(unlist(getRversion())[2], collapse = ".")',
+      'values["z"] <- paste(unlist(getRversion())[3], collapse = ".")',
+      'values["x_y"] <- paste(unlist(getRversion())[1:2], collapse = ".")',
+      'values["x_y_z"] <- as.character(getRversion())',
+      'lines <- c(lines, sprintf("r_version:%s=%s", names(values), values))',
+      "values <- .Machine",
+      'lines <- c(lines, sprintf("machine:%s=%s", names(values), values))',
+      "values <- extSoftVersion()",
+      'lines <- c(lines, sprintf("ext_soft_version:%s=%s", names(values), values))',
+      'components <- c("home", "bin", "doc", "etc", "include", "modules", "share")',
+      'values <- vapply(components, FUN = R.home, FUN.VALUE = "")',
+      'lines <- c(lines, sprintf("r_home:%s=%s", names(values), values))',
+      "values <- rc.options()",
+      'lines <- c(lines, sprintf("readline_options:%s=%s", names(values), values))',
+      "values <- rc.settings()",
+      'lines <- c(lines, sprintf("readline_settings:%s=%s", names(values), values))',
+      'values <- c(interactive = interactive(), home = normalizePath("~"), pwd = getwd(), tempdir = tempdir())',
+      'values <- c(values, rng_kind = paste(RNGkind(), collapse = " "), timezone = Sys.timezone())',
+      'values <- c(values, lib_paths = paste(shQuote(.libPaths()), collapse = " "))',
+      'values <- c(values, loaded_packages = paste(loadedNamespaces(), collapse = " "))',
+      'lines <- c(lines, sprintf("session:%s=%s", names(values), values))',
+      "values <- commandArgs()",
+      'names(values) <- sprintf("%d", seq_along(values))',
+      'lines <- c(lines, sprintf("command_args:%s=%s", names(values), values))',
+      "values <- c(La_library = La_library(), La_version = La_version())",
+      'lines <- c(lines, sprintf("lapack:%s=%s", names(values), values))',
+      "values <- l10n_info()",
+      'lines <- c(lines, sprintf("localization:%s=%s", names(values), values))',
+      'values <- strsplit(Sys.getenv("R_LIBS_USER"), split = ":", fixed = TRUE)[[1]]',
+      'values <- gsub(sprintf("^%s", normalizePath("~")), "~", values)',
+      'lines <- c(lines, sprintf("rw_suggestions:%s=%s", names(values), values))',
+      "lines <- sort(lines)",
+    ];
+    if (field !== null) {
+      code.push(
+        `field <- ${JSON.stringify(field)}`,
+        'prefix <- paste0(field, "=")',
+        "idx <- which(startsWith(lines, prefix))",
+        "if (length(idx) == 0L) {",
+        '    message(sprintf("Unknown --config field: %s", field))',
+        '    message("Available fields:")',
+        '    fields <- sub("=.*", "", lines)',
+        '    message(paste(sprintf("  %s", fields), collapse = "\\n"))',
+        "} else {",
+        "    values <- substring(lines[idx], nchar(prefix) + 1L)",
+        "    writeLines(values)",
+        "}",
+      );
+    } else {
+      code.push("writeLines(lines)");
+    }
+
+    const shelter = await new webR.Shelter();
+    try {
+      const res = await shelter.captureR(code.join("\n"), {
+        captureStreams: true,
+      });
+      for (const out of res.output) {
+        if (out.type === "stdout") process.stdout.write(out.data);
+        if (out.type === "stderr") process.stderr.write(out.data);
+      }
+    } finally {
+      await shelter.purge();
+    }
+  } finally {
+    await webR.close();
   }
-  await webR.evalR(code);
 }
