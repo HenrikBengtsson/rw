@@ -454,6 +454,7 @@ export class RwSession {
  * @property {string[]} exprs - Main R expressions to run
  * @property {string[]} epilogue_exprs - R expressions to run after main code
  * @property {number} timeout - Timeout in seconds
+ * @property {Object<string, string>} env_vars - Environment variables to set in R
  */
 
 /**
@@ -476,10 +477,20 @@ export async function run(options = {}) {
     exprs = [],
     epilogue_exprs = [],
     timeout = 0,
+    env_vars = {},
   } = options;
 
   const session = new RwSession({ debug });
   await session.init({ r_args: webr_args });
+
+  // Set environment variables in R
+  if (Object.keys(env_vars).length > 0) {
+    if (debug) console.log("Setting R environment variables:", env_vars);
+    if (verbose) console.error("Setting R environment variables");
+    for (const [name, value] of Object.entries(env_vars)) {
+      await session.webR.evalRVoid(`Sys.setenv(${name} = ${JSON.stringify(value)})`);
+    }
+  }
 
   // Mount R library if specified
   if (r_libs_user) {

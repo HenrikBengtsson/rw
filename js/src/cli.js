@@ -363,6 +363,7 @@ function make_run_spec(options) {
     timeout: options.timeout,
     allow_net: options.allow_net,
     allow_run: options.allow_run,
+    env_vars: options.env_vars,
   };
 }
 
@@ -430,6 +431,8 @@ Options (evaluation):
   --expr=[R code]               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
   --timeout=[seconds]           Maximum evaluation time in seconds
+  --env=VAR                     Set environment variable VAR from current environment
+  --env=VAR=value               Set environment variable VAR to value
 
 Examples:
 
@@ -513,6 +516,7 @@ export function parse_args(args) {
     allow_net: [],
     allow_run: [],
     r_args: [],
+    env_vars: {},
   };
 
   const flags = {
@@ -651,6 +655,22 @@ export function parse_args(args) {
         );
       }
       if (options.debug) console.log(`timeout=${options.timeout}`);
+    } else if (arg.startsWith(prefix = "--env=")) {
+      value = arg.slice(prefix.length);
+      const eq = value.indexOf("=");
+      let name, val;
+      if (eq === -1) {
+        name = value;
+        val = process.env[name];
+        if (val === undefined) {
+          throw new Error(`Environment variable '${name}' not found.`);
+        }
+      } else {
+        name = value.slice(0, eq);
+        val = value.slice(eq + 1);
+      }
+      options.env_vars[name] = val;
+      if (options.debug) console.log(`env ${name}=${val}`);
     } else {
       if (command.type === "install") {
         if (arg === "--docker") {
