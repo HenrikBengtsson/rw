@@ -239,7 +239,7 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.400
+Version: 0.0.401
 JS Runtime: deno 2.7.12
 webR: 0.5.9
 License: MIT
