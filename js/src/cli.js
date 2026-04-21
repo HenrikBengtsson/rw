@@ -20,6 +20,9 @@ const __dirname = path.dirname(__filename);
 // Package root is one level up from src/
 const __pkgdir = path.dirname(__dirname);
 
+// Wall-clock start time captured as early as possible for --verbose timing
+const START_TIME = Date.now();
+
 const USER_RWCONFIG_PATH = path.join(os.homedir(), ".rwconfig");
 
 /**
@@ -381,6 +384,7 @@ function make_run_spec(options, task = "run") {
     allow_net: options.allow_net,
     allow_run: options.allow_run,
     env_vars: options.env_vars,
+    start_time: START_TIME,
   };
 }
 
@@ -1155,7 +1159,7 @@ async function main() {
     } catch {
       // already validated that it exists, so this is just a fallback
     }
-    console.error(`Runtime: ${host} ${host_version} (${engine} ${webr_version})`);
+    console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Runtime: ${host} ${host_version} (${engine} ${webr_version})`);
   }
 
   if (command.type === "install") {
@@ -1248,6 +1252,7 @@ async function main() {
     );
     options.exprs = install_exprs;
 
+    if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ...`);
     let exit_code;
     try {
       exit_code = await spawn_worker(options.runtime, {
@@ -1257,8 +1262,10 @@ async function main() {
       });
     } catch (e) {
       console.error("ERROR: " + e.message);
+      if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ... failed`);
       process.exit(1);
     }
+    if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ... done`);
     process.exit(exit_code);
   }
 
@@ -1288,6 +1295,7 @@ async function main() {
     })`;
     options.exprs = [`remove.packages(${pkgs_r}, lib = .libPaths()[1])`];
 
+    if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ...`);
     let exit_code;
     try {
       exit_code = await spawn_worker(options.runtime, {
@@ -1296,8 +1304,10 @@ async function main() {
       });
     } catch (e) {
       console.error("ERROR: " + e.message);
+      if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ... failed`);
       process.exit(1);
     }
+    if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ... done`);
     process.exit(exit_code);
   }
 
@@ -1318,6 +1328,7 @@ async function main() {
   }
 
   // Run
+  if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ...`);
   let exit_code;
   try {
     exit_code = await spawn_worker(options.runtime, {
@@ -1326,8 +1337,10 @@ async function main() {
     });
   } catch (e) {
     console.error("ERROR: " + e.message);
+    if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ... failed`);
     process.exit(1);
   }
+  if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ... done`);
   process.exit(exit_code);
 }
 

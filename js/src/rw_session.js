@@ -483,28 +483,36 @@ export async function run(options = {}) {
     epilogue_exprs = [],
     timeout = 0,
     env_vars = {},
+    start_time = 0,
   } = options;
 
+  const ts = () => start_time > 0 ? `[+${((Date.now() - start_time) / 1000).toFixed(3)}s] ` : "";
+
+  if (verbose) console.error(`${ts()}WebR initializing ...`);
   const session = new RwSession({ debug });
   await session.init({ r_args: webr_args, env_vars });
+  if (verbose) console.error(`${ts()}WebR initializing ... done`);
 
   // Mount R library if specified
   if (r_libs_user) {
+    if (verbose) console.error(`${ts()}Mount R library ...`);
     const normalized_libs = normalize_path(r_libs_user);
     const r_libs_webr = "/host/R_LIBS_USER";
     if (verbose) {
       console.error(
-        `Binding host R library '${normalized_libs}' to '${r_libs_webr}' in R (${
+        `${ts()}Binding host R library '${normalized_libs}' to '${r_libs_webr}' in R (${
           persistent ? "writable" : "read-only"
         })`,
       );
     }
     await session.mount(normalized_libs, r_libs_webr);
     await session.set_lib_paths(r_libs_webr, { append: !persistent });
+    if (verbose) console.error(`${ts()}Mount R library ... done`);
   }
 
   // Bind host directories
   for (const bind of binds) {
+    if (verbose) console.error(`${ts()}Bind directories ...`);
     let webr_path = bind.webr;
     if (!webr_path.startsWith("/")) {
       // Resolve relative webR paths (including ".") against R's working directory
@@ -513,34 +521,39 @@ export async function run(options = {}) {
     }
     if (verbose) {
       console.error(
-        `Binding host folder '${bind.host}' to '${webr_path}' in R${
+        `${ts()}Binding host folder '${bind.host}' to '${webr_path}' in R${
           bind.readonly ? " (read-only)" : ""
         }`,
       );
     }
     await session.mount(bind.host, webr_path, bind.readonly);
+    if (verbose) console.error(`${ts()}Bind directories ... done`);
   }
 
   // Install shims
   const filtered_shims = shims.filter((str) => str !== "");
   if (filtered_shims.length > 0) {
+    if (verbose) console.error(`${ts()}Installing shims ...`);
     await session.install_shims(filtered_shims);
+    if (verbose) console.error(`${ts()}Installing shims ... done`);
   }
 
   const r_bastion_webr = "/host/bastion";
 
   if (bastion_host && verbose) {
+    if (verbose) console.error(`${ts()}Bind bastion directory ...`);
     console.error(
-      `Binding bastion folder '${bastion_host}' to '${r_bastion_webr}' in R${
+      `${ts()}Binding bastion folder '${bastion_host}' to '${r_bastion_webr}' in R${
         bastion_readonly ? " (read-only)" : ""
       }`,
     );
+    if (verbose) console.error(`${ts()}Bind bastion directory ... done`);
   }
 
   // Prologue
   if (prologue_exprs.length > 0) {
     if (debug) console.log("Evaluating prologue R code ...");
-    if (verbose) console.error("Evaluating prologue R code");
+    if (verbose) console.error(`${ts()}Evaluating prologue R code ...`);
 
     if (bastion_host) {
       await session.mount(bastion_host, r_bastion_webr, bastion_readonly);
@@ -553,12 +566,13 @@ export async function run(options = {}) {
     }
 
     if (debug) console.log("Evaluating prologue R code ... done");
+    if (verbose) console.error(`${ts()}Evaluating prologue R code ... done`);
   }
 
   // Main
   if (exprs.length > 0) {
     if (debug) console.log("Evaluate main R code ...");
-    if (verbose) console.error("Evaluating R code");
+    if (verbose) console.error(`${ts()}Evaluating R code ...`);
 
     // For 'install' task, we might have local tarballs in exprs.
     // We need to mount their parent directories so webR can see them.
@@ -589,12 +603,13 @@ export async function run(options = {}) {
 
     await session.eval_code(exprs, { timeout });
     if (debug) console.log("Evaluate main R code ... done");
+    if (verbose) console.error(`${ts()}Evaluating R code ... done`);
   }
 
   // Epilogue
   if (epilogue_exprs.length > 0) {
     if (debug) console.log("Evaluating epilogue R code ...");
-    if (verbose) console.error("Evaluating epilogue R code");
+    if (verbose) console.error(`${ts()}Evaluating epilogue R code ...`);
 
     if (bastion_host) {
       await session.mount(bastion_host, r_bastion_webr, bastion_readonly);
@@ -607,6 +622,7 @@ export async function run(options = {}) {
     }
 
     if (debug) console.log("Evaluating epilogue R code ... done");
+    if (verbose) console.error(`${ts()}Evaluating epilogue R code ... done`);
   }
 
   return session;
