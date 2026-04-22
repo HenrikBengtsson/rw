@@ -278,47 +278,6 @@ Deno.test({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Stdin error detection
-// ---------------------------------------------------------------------------
-
-Deno.test({
-  name: "rw --expr=... with piped stdin exits 1 with informative error",
-  sanitizeResources: false,
-  sanitizeOps: false,
-  timeout: 10_000,
-  async fn() {
-    const { code, stderr } = await rw(["--expr=1+1"], { stdin: "hello\n" });
-    assertEquals(code, 1, `Expected exit 1, got ${code}`);
-    assert(
-      stderr.includes("R cannot read from stdin"),
-      `Expected stdin error in stderr:\n${stderr}`,
-    );
-  },
-});
-
-Deno.test({
-  name: "rw script.R with piped stdin exits 1 with informative error",
-  sanitizeResources: false,
-  sanitizeOps: false,
-  timeout: 10_000,
-  async fn() {
-    const tmp = Deno.makeTempDirSync({ prefix: "rw_ex_" });
-    const script = path.join(tmp, "main.R");
-    try {
-      fs.writeFileSync(script, "1+1\n");
-      const { code, stderr } = await rw([script], { stdin: "hello\n" });
-      assertEquals(code, 1, `Expected exit 1, got ${code}`);
-      assert(
-        stderr.includes("R cannot read from stdin"),
-        `Expected stdin error in stderr:\n${stderr}`,
-      );
-    } finally {
-      fs.rmSync(tmp, { recursive: true });
-    }
-  },
-});
-
 Deno.test({
   name: "rw env list",
   sanitizeResources: false,
