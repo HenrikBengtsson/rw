@@ -1312,13 +1312,25 @@ async function main() {
   }
 
   // Read R code from stdin if piped/redirected and no code was given
+  let stdin_used_for_code = false;
   if (options.exprs.length === 0 && !process.stdin.isTTY) {
     const stdin_code = fs.readFileSync(0, "utf8");
     options.exprs = stdin_code.split(/\r?\n/).filter((str) => str !== "");
+    stdin_used_for_code = true;
     if (options.debug) {
       console.log("R main code from stdin to be parsed and evaluated:");
       console.log(options.exprs);
     }
+  }
+
+  // Stdin is piped but wasn't consumed as R code — R cannot read it in webR
+  if (!process.stdin.isTTY && !stdin_used_for_code) {
+    console.error(
+      "ERROR: R cannot read from stdin in webR. " +
+      "Save your data to a file and use --bind to expose it:\n" +
+      "  rw --bind=./data.txt:/data.txt --expr='readLines(\"/data.txt\")'"
+    );
+    process.exit(1);
   }
 
   // Show help if no code to run
