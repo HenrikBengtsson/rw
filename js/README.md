@@ -246,6 +246,15 @@ License: MIT
 Author: Henrik Bengtsson
 ```
 
+## Known Limitations
+
+### R cannot read from stdin
+
+R code running inside `rw` cannot read from stdin (e.g. `readLines("stdin")`
+or `scan(file="stdin")`). webR's evaluation engine forces non-interactive mode,
+which prevents R from invoking its `ReadConsole` hook — so any attempt to read
+from stdin returns immediately with zero results (`character(0)`).
+
 [webR]: https://github.com/r-wasm/webr/
 [Node.js]: https://nodejs.org/en/
 [Deno]: https://deno.com/
