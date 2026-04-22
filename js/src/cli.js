@@ -1323,14 +1323,19 @@ async function main() {
     }
   }
 
-  // Stdin is piped but wasn't consumed as R code — R cannot read it in webR
-  if (!process.stdin.isTTY && !stdin_used_for_code) {
-    console.error(
-      "ERROR: R cannot read from stdin in webR. " +
-      "Save your data to a file and use --bind to expose it:\n" +
-      "  rw --bind=./data.txt:/data.txt --expr='readLines(\"/data.txt\")'"
-    );
-    process.exit(1);
+  // Stdin is a pipe or file redirect with code provided elsewhere — R cannot
+  // read it in webR.  Check fstat(0) so we don't false-positive on /dev/null
+  // or other character devices (e.g. in CI where stdin is "null").
+  if (!stdin_used_for_code) {
+    const st = fs.fstatSync(0);
+    if (st.isFIFO() || st.isFile()) {
+      console.error(
+        "ERROR: R cannot read from stdin in webR. " +
+        "Save your data to a file and use --bind to expose it:\n" +
+        "  rw --bind=./data.txt:/data.txt --expr='readLines(\"/data.txt\")'"
+      );
+      process.exit(1);
+    }
   }
 
   // Show help if no code to run
