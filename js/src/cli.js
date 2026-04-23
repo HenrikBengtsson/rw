@@ -567,7 +567,16 @@ export function parse_args(args) {
   let r_prologue_script = null;
   let r_epilogue_script = null;
 
-  for (const arg of args) {
+  // Find the last --expr= flag so that positional args appearing after it are
+  // unambiguously R arguments (commandArgs()), while everything before it is
+  // parsed as rw arguments.
+  let last_expr_arg_idx = -1;
+  for (let _i = 0; _i < args.length; _i++) {
+    if (args[_i].startsWith("--expr=")) last_expr_arg_idx = _i;
+  }
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
     let prefix, value;
 
     if (arg === "--help") {
@@ -698,11 +707,21 @@ export function parse_args(args) {
       options.env_vars[name] = val;
       if (options.debug) console.log(`env ${name}=${val}`);
     } else if (arg.startsWith(prefix = "--input=")) {
-      value = arg.slice(prefix.length);
-      options.input = options.input === null ? value : options.input + "\n" + value;
-      if (options.debug) console.log(`input=${JSON.stringify(value)}`);
+      if (last_expr_arg_idx !== -1 && i > last_expr_arg_idx) {
+        // After the last --expr=: treat as an R argument (commandArgs()), not stdin data
+        if (options.r_args.length === 0) options.r_args.push("--args");
+        options.r_args.push(arg);
+      } else {
+        value = arg.slice(prefix.length);
+        options.input = options.input === null ? value : options.input + "\n" + value;
+        if (options.debug) console.log(`input=${JSON.stringify(value)}`);
+      }
     } else {
-      if (command.type === "install") {
+      if (last_expr_arg_idx !== -1 && i > last_expr_arg_idx) {
+        // Positional arg after the last --expr=: always an R argument
+        if (options.r_args.length === 0) options.r_args.push("--args");
+        options.r_args.push(arg);
+      } else if (command.type === "install") {
         if (arg === "--docker") {
           command.install_docker = true;
         } else {
@@ -724,6 +743,8 @@ export function parse_args(args) {
           command.type = "uninstall";
         } else if (arg === "build") {
           command.type = "build";
+        } else if (arg.startsWith("--")) {
+          throw new Error(`Unknown option ${arg}`);
         } else {
           r_script = arg;
           if (options.debug) console.log(`r_script=${r_script}`);

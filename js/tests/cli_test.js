@@ -764,6 +764,61 @@ Deno.test("parse_args: trailing args after --expr go into webr_args", () => {
   assertEquals(options.webr_args, ["--args", "--", "arg1", "arg2"]);
 });
 
+Deno.test("parse_args: positional args after last --expr= are R args", () => {
+  const { options } = parse_clean([
+    "--no-config",
+    "--expr=x <- 1",
+    "--expr=cat(x)",
+    "foo",
+    "bar",
+  ]);
+  assertEquals(options.exprs, ["x <- 1", "cat(x)"]);
+  assertArrayIncludes(options.webr_args, ["foo", "bar"]);
+});
+
+Deno.test("parse_args: rw flags after last --expr= still parsed as rw flags", () => {
+  const { options } = parse_clean([
+    "--no-config",
+    "--expr=1",
+    "--timeout=7",
+    "foo",
+  ]);
+  assertEquals(options.timeout, 7);
+  assertArrayIncludes(options.webr_args, ["foo"]);
+});
+
+Deno.test("parse_args: install package arg before last --expr= is install arg, not R arg", () => {
+  const tmpDir = Deno.makeTempDirSync();
+  try {
+    const { command, options } = parse_clean([
+      "--no-config",
+      "--persistent",
+      `--r-libs-user=${tmpDir}`,
+      "install",
+      "praise",
+      "--expr=1",
+      "trailing",
+    ]);
+    assertEquals(command.type, "install");
+    assertEquals(command.install_packages, ["praise"]);
+    assertArrayIncludes(options.webr_args, ["trailing"]);
+  } finally {
+    Deno.removeSync(tmpDir);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// parse_args — unknown option error
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: unknown --flag before --expr throws 'Unknown option'", () => {
+  assertThrows(
+    () => parse_clean(["--no-config", "--foo=hello", "--expr=1"]),
+    Error,
+    "Unknown option --foo=hello",
+  );
+});
+
 // ---------------------------------------------------------------------------
 // parse_args — subcommand error cases
 // ---------------------------------------------------------------------------
@@ -996,4 +1051,24 @@ Deno.test("parse_args: --debug logs --input value", () => {
     "--expr=1",
   ]);
   assertEquals(logged.some((l) => l.includes("input=")), true);
+});
+
+Deno.test("parse_args: --input after last --expr= is an R arg, not stdin data", () => {
+  const { options } = parse_clean([
+    "--no-config",
+    "--expr=readLines(warn=FALSE)",
+    "--input=hello",
+  ]);
+  assertEquals(options.input, null);
+  assertArrayIncludes(options.webr_args, ["--input=hello"]);
+});
+
+Deno.test("parse_args: --input before last --expr= is stdin data", () => {
+  const { options } = parse_clean([
+    "--no-config",
+    "--input=hello",
+    "--expr=readLines(warn=FALSE)",
+  ]);
+  assertEquals(options.input, "hello");
+  assertEquals(options.webr_args.includes("--input=hello"), false);
 });
