@@ -384,6 +384,7 @@ function make_run_spec(options, task = "run") {
     allow_net: options.allow_net,
     allow_run: options.allow_run,
     env_vars: options.env_vars,
+    input: options.input,
     start_time: START_TIME,
   };
 }
@@ -451,6 +452,9 @@ Options (runtime):
 Options (evaluation):
   --expr=[R code]               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
+  --input=[string]              String to provide as standard input to R
+                                (may be specified multiple times; values joined
+                                with newline; enables readLines('stdin') etc.)
   --timeout=[seconds]           Maximum evaluation time in seconds
   --env=VAR                     Set environment variable VAR from current environment
   --env=VAR=value               Set environment variable VAR to value
@@ -538,6 +542,7 @@ export function parse_args(args) {
     allow_run: [],
     r_args: [],
     env_vars: {},
+    input: null,
   };
 
   const flags = {
@@ -692,6 +697,10 @@ export function parse_args(args) {
       }
       options.env_vars[name] = val;
       if (options.debug) console.log(`env ${name}=${val}`);
+    } else if (arg.startsWith(prefix = "--input=")) {
+      value = arg.slice(prefix.length);
+      options.input = options.input === null ? value : options.input + "\n" + value;
+      if (options.debug) console.log(`input=${JSON.stringify(value)}`);
     } else {
       if (command.type === "install") {
         if (arg === "--docker") {

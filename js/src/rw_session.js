@@ -483,6 +483,7 @@ export async function run(options = {}) {
     epilogue_exprs = [],
     timeout = 0,
     env_vars = {},
+    input = null,
     start_time = 0,
   } = options;
 
@@ -492,6 +493,28 @@ export async function run(options = {}) {
   const session = new RwSession({ debug });
   await session.init({ r_args: webr_args, env_vars });
   if (verbose) console.error(`${ts()}WebR initializing ... done`);
+
+  // Set up stdin shim when --input is provided
+  if (input !== null) {
+    if (debug) console.log("Setting up stdin shim ...");
+    const encoder = new TextEncoder();
+    await session.webR.FS.writeFile("/tmp/.rw_stdin_input", encoder.encode(input));
+    await session.eval_code_void(`
+local({
+  .rw_input_con_ <- file('/tmp/.rw_stdin_input', open = 'r')
+  attach(list(
+    stdin = function() .rw_input_con_,
+    readLines = function(con = stdin(), ...) {
+      if (is.character(con) && identical(con, 'stdin')) {
+        base::readLines(.rw_input_con_, ...)
+      } else {
+        base::readLines(con, ...)
+      }
+    }
+  ), name = 'rw_stdin_shim', warn.conflicts = FALSE)
+})`);
+    if (debug) console.log("Setting up stdin shim ... done");
+  }
 
   // Mount R library if specified
   if (r_libs_user) {

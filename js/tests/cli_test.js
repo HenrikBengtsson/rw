@@ -958,3 +958,42 @@ Deno.test("parse_args: --debug logs 'Using default R shims'", () => {
   const { logged } = parse_clean_log(["--no-config", "--debug", "--expr=1"]);
   assertEquals(logged.some((l) => l.includes("Using default R shims")), true);
 });
+
+// ---------------------------------------------------------------------------
+// parse_args — --input
+// ---------------------------------------------------------------------------
+
+Deno.test("parse_args: --input=<value> sets options.input", () => {
+  const { options } = parse_clean(["--no-config", "--input=hello", "--expr=1"]);
+  assertEquals(options.input, "hello");
+});
+
+Deno.test("parse_args: no --input leaves options.input null", () => {
+  const { options } = parse_clean(["--no-config", "--expr=1"]);
+  assertEquals(options.input, null);
+});
+
+Deno.test("parse_args: multiple --input flags joined with newline", () => {
+  const { options } = parse_clean([
+    "--no-config",
+    "--input=line1",
+    "--input=line2",
+    "--expr=1",
+  ]);
+  assertEquals(options.input, "line1\nline2");
+});
+
+Deno.test("parse_args: --input='' is empty string", () => {
+  const { options } = parse_clean(["--no-config", "--input=", "--expr=1"]);
+  assertEquals(options.input, "");
+});
+
+Deno.test("parse_args: --debug logs --input value", () => {
+  const { logged } = parse_clean_log([
+    "--no-config",
+    "--debug",
+    "--input=hello",
+    "--expr=1",
+  ]);
+  assertEquals(logged.some((l) => l.includes("input=")), true);
+});
