@@ -121,6 +121,65 @@ rw --runtime="deno:webr" \
 If left out, the default is `--runtime="deno:webr"`.
 
 
+# Install R Packages Permanently
+
+By default, the life-time of packages installed in webR is only as
+long as the webR session. As soon as webR terminates, the installed
+packages are lost.
+
+To install package permanently, we can install the webR package
+binaries on the file system of the host to the folder specified by
+`--r-libs-user=<path>`. This can be done as:
+
+```sh
+$ mkdir -p ~/R/wasm32-unknown-emscripten-library/4.5
+$ rw install \
+    --persistent --r-libs-user=~/R/wasm32-unknown-emscripten-library/4.5 \
+    praise curl
+Downloading webR package: praise
+Downloading webR package: curl
+```
+
+We can confirm that it was installed on the host as:
+
+```r
+$ rw \
+    --persistent --r-libs-user=~/R/wasm32-unknown-emscripten-library/4.5 \
+    --expr='find.package("praise")'
+[1] "/host/R_LIBS_USER/praise"
+```
+
+To avoid having to specify the `--r-libs-user=<path>` option in each
+call, we can configure it to be the default, as:
+
+```sh
+$ rw config set r-libs-user ~/R/wasm32-unknown-emscripten-library/4.5
+r-libs-user=/home/alice/R/wasm32-unknown-emscripten-library/4.5
+```
+
+Afterwards, we can install packages persistently using:
+
+```sh
+$ rw install --persistent praise curl
+```
+
+
+## Proxy Connections
+
+Assuming we have `r-libs-user` configured (see above) and **curl**
+already instealled, we verify that all **curl**-based tools have
+access to the internet via the built-in proxy as:
+
+```sh
+$ rw \
+    --allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443 \
+    --persistent \
+    --expr='curl::has_internet()'
+Testing for internet connectivity via https_proxy... success!
+[1] TRUE
+```
+
+
 ## Command-line Interface
 
 ```sh
@@ -190,6 +249,9 @@ Options (runtime):
 Options (evaluation):
   --expr=[R code]               R code to evaluate (multiple okay)
                                 Alternative to specifying 'script.R'
+  --input=[string]              String to provide as standard input to R
+                                (may be specified multiple times; values joined
+                                with newline; enables readLines('stdin') etc.)
   --timeout=[seconds]           Maximum evaluation time in seconds
   --env=VAR                     Set environment variable VAR from current environment
   --env=VAR=value               Set environment variable VAR to value
@@ -239,7 +301,7 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.402
+Version: 0.0.403
 JS Runtime: deno 2.7.12
 webR: 0.5.9
 License: MIT
