@@ -78,10 +78,10 @@ Deno.test({
     const { code, stdout, stderr } = await rw([
       "--no-config",
       `--r-libs-user=${TEST_LIBS_USER}`,
-      "--allow-net=ws.r-universe.dev:443",
+      "--allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443",
       "--persistent",
     ], {
-      stdin: 'Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
+      stdin: 'if (utils::packageVersion("curl") < "7.1.0") Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
     });
     
     assertEquals(code, 0, `Expected exit code 0, got ${code}. Stderr: ${stderr}`);

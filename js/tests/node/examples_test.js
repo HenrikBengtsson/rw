@@ -238,7 +238,7 @@ describe("rw --help examples", () => {
       "--persistent",
       `--r-libs-user=${TEST_LIBS_USER}`
     ], {
-      stdin: 'Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
+      stdin: 'if (utils::packageVersion("curl") < "7.1.0") Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
     });
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert.ok(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
