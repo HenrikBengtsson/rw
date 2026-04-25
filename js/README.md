@@ -138,15 +138,8 @@ $ rw install \
     praise curl
 Downloading webR package: praise
 Downloading webR package: curl
-```
-
-We can confirm that it was installed on the host as:
-
-```r
-$ rw \
-    --persistent --r-libs-user=~/R/wasm32-unknown-emscripten-library/4.5 \
-    --expr='find.package("praise")'
-[1] "/host/R_LIBS_USER/praise"
+Installed praise v1.0.0 into /host/R_LIBS_USER
+Installed curl v7.1.0 into /host/R_LIBS_USER
 ```
 
 To avoid having to specify the `--r-libs-user=<path>` option in each
@@ -299,7 +292,7 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.404
+Version: 0.0.406
 JS Runtime: deno 2.7.12
 webR: 0.5.9
 License: MIT
