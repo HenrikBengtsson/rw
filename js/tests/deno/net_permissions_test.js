@@ -78,7 +78,7 @@ Deno.test({
     const { code, stdout, stderr } = await rw([
       "--no-config",
       `--r-libs-user=${TEST_LIBS_USER}`,
-      "--allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443",
+      "--curl-proxy",
       "--persistent",
     ], {
       stdin: 'if (utils::packageVersion("curl") < "7.1.0") Sys.setenv(ALL_PROXY = "socks5h://test:yolo@ws.r-universe.dev:443")\ncurl::has_internet()\n'
@@ -101,7 +101,7 @@ Deno.test({
       const { code, stdout, stderr } = await rw([
         "--no-config",
         `--r-libs-user=${TEST_LIBS_USER}`,
-        "--allow-net=ws.r-universe.dev:443",
+        "--curl-proxy",
         "--persistent",
         `--env=${key}`,
         "--expr=curl::has_internet()",
@@ -124,7 +124,7 @@ Deno.test({
     const { code, stdout, stderr } = await rw([
       "--no-config",
       `--r-libs-user=${TEST_LIBS_USER}`,
-      "--allow-net=ws.r-universe.dev:443",
+      "--curl-proxy",
       "--persistent",
       `--env=ALL_PROXY=${val}`,
       "--expr=curl::has_internet()",
@@ -224,6 +224,22 @@ Deno.test({
     } finally {
       try { fs.rmSync(tmp, { recursive: true }); } catch {}
     }
+  },
+});
+
+Deno.test({
+  name: "--curl-proxy sets correct --allow-net",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const { stderr } = await rw([
+      "--no-config",
+      "--debug",
+      "--curl-proxy",
+      "--expr=1",
+    ]);
+    
+    assert(stderr.includes("--allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443"), "Should include correct --allow-net for --curl-proxy");
   },
 });
 

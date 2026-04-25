@@ -171,10 +171,7 @@ already instealled, we verify that all **curl**-based tools have
 access to the internet via the built-in proxy as:
 
 ```sh
-$ rw \
-    --allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443 \
-    --persistent \
-    --expr='curl::has_internet()'
+$ rw --curl-proxy --persistent --expr='curl::has_internet()'
 Testing for internet connectivity via https_proxy... success!
 [1] TRUE
 ```

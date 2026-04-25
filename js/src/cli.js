@@ -440,6 +440,7 @@ Options (runtime):
                                 or './bastion/' if it exists)
   --allow-net[=host[,...]]      Allow network access (Deno runtime only)
                                 (default: none, unless 'install' is used)
+  --curl-proxy                  Shortcut for --allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443
   --allow-run[=bin[,...]]       Allow running subprocesses (Deno runtime only)
   --prologue=[R script]         R script evaluated before main R code
   --epilogue=[R script]         R script evaluated after main R code
@@ -635,6 +636,8 @@ export function parse_args(args) {
     } else if (arg.startsWith(prefix = "--allow-net=")) {
       value = arg.slice(prefix.length);
       options.allow_net.push(...value.split(","));
+    } else if (arg === "--curl-proxy") {
+      options.allow_net.push("get-ws-proxy.r-universe.dev:443", "ws.r-universe.dev:443");
     } else if (arg === "--allow-run") {
       options.allow_run.push(""); // empty string represents "allow all"
     } else if (arg.startsWith(prefix = "--allow-run=")) {

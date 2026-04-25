@@ -171,10 +171,7 @@ already instealled, we verify that all **curl**-based tools have
 access to the internet via the built-in proxy as:
 
 ```sh
-$ rw \
-    --allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443 \
-    --persistent \
-    --expr='curl::has_internet()'
+$ rw --curl-proxy --persistent --expr='curl::has_internet()'
 Testing for internet connectivity via https_proxy... success!
 [1] TRUE
 ```
@@ -237,6 +234,7 @@ Options (runtime):
                                 or './bastion/' if it exists)
   --allow-net[=host[,...]]      Allow network access (Deno runtime only)
                                 (default: none, unless 'install' is used)
+  --curl-proxy                  Shortcut for --allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443
   --allow-run[=bin[,...]]       Allow running subprocesses (Deno runtime only)
   --prologue=[R script]         R script evaluated before main R code
   --epilogue=[R script]         R script evaluated after main R code
@@ -301,7 +299,7 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.403
+Version: 0.0.404
 JS Runtime: deno 2.7.12
 webR: 0.5.9
 License: MIT
