@@ -1285,6 +1285,26 @@ async function main() {
     );
     options.exprs = install_exprs;
 
+    // Report on installed packages
+    const pkgs_r = `c(${command.install_packages.map(p => JSON.stringify(p)).join(", ")})`;
+    options.exprs.push(`
+      local({
+        pkgs <- ${pkgs_r}
+        for (pkg in pkgs) {
+          pkgname <- if (grepl("[.]tar[.]gz$|[.]tgz$", pkg)) {
+            gsub("_.*", "", basename(pkg))
+          } else {
+            pkg
+          }
+          tryCatch({
+            ver <- as.character(utils::packageVersion(pkgname))
+            lib <- dirname(system.file(package = pkgname))
+            cat(sprintf("Installed %s v%s into %s\\n", pkgname, ver, lib))
+          }, error = function(e) {})
+        }
+      })
+    `);
+
     if (options.verbose) console.error(`[+${((Date.now() - START_TIME) / 1000).toFixed(3)}s] Spawning worker process ...`);
     let exit_code;
     try {

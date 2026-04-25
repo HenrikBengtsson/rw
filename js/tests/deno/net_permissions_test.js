@@ -55,7 +55,7 @@ Deno.test({
   sanitizeOps: false,
   ignore: false,
   async fn() {
-    const { code, stderr } = await rw([
+    const { code, stdout, stderr } = await rw([
       "--no-config",
       "--persistent",
       `--r-libs-user=${TEST_LIBS_USER}`,
@@ -63,6 +63,7 @@ Deno.test({
       "curl"
     ]);
     assertEquals(code, 0, `Failed to install curl: ${stderr}`);
+    assert(stdout.includes("Installed curl v") && stdout.includes(" into /host/R_LIBS_USER"), `Expected version and lib path report in stdout, got: ${stdout}`);
   },
 });
 
