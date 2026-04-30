@@ -255,6 +255,7 @@ Examples:
   rw main.R
   rw < main.R
   rw --expr="message('running script ...')" main.R
+  rw commandArgs.R --a=1 --name="world"
 
   # Interrupt after 3.5 seconds, if not completed
   rw --timeout=3.5 --expr="slow <- function() { Sys.sleep(5); 42 }" \
