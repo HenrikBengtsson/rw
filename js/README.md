@@ -227,6 +227,7 @@ Options (runtime):
                                 or './bastion/' if it exists)
   --allow-net[=host[,...]]      Allow network access (Deno runtime only)
                                 (default: none, unless 'install' is used)
+  --unsafely-ignore-certificate-errors[=host[,...]] Disable SSL certificate verification
   --curl-proxy                  Shortcut for --allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443
   --allow-run[=bin[,...]]       Allow running subprocesses (Deno runtime only)
   --prologue=[R script]         R script evaluated before main R code
@@ -293,7 +294,7 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
-Version: 0.0.406
+Version: 0.0.408
 JS Runtime: deno 2.7.12
 webR: 0.5.9
 License: MIT

@@ -184,6 +184,12 @@ function spawn_worker_proc(cmd, args, spec_json, timeout_s) {
     const env = Object.fromEntries(
       WORKER_ENV_ALLOWLIST.flatMap(k => process.env[k] !== undefined ? [[k, process.env[k]]] : [])
     );
+
+    const spec_options = JSON.parse(spec_json).options;
+    if (spec_options?.unsafely_ignore_certificate_errors?.length > 0) {
+      env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+    }
+
     env["DENO_NO_UPDATE_CHECK"] = "1";
     env["DENO_NO_PROMPT"] = "1";
     const proc = spawn(cmd, args, { stdio: ["pipe", "inherit", "inherit"], env });
@@ -250,7 +256,7 @@ function deno_read_paths(spec) {
       }
     }
   }
-  return paths;
+  return [...new Set(paths)];
 }
 
 /**
@@ -281,7 +287,7 @@ function deno_write_paths(spec) {
       if (!bind.readonly) paths.push(bind.host);
     }
   }
-  return paths;
+  return [...new Set(paths)];
 }
 
 /**
@@ -309,6 +315,19 @@ async function deno_spawn_worker(worker_path, spec) {
     `--allow-read=${read_paths.join(",")}`,
     `--allow-write=${write_paths.join(",")}`,
   ];
+
+  const unsafely_ignore = [...(spec.options?.unsafely_ignore_certificate_errors || [])];
+  if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0" || spec.options?.env_vars?.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+    unsafely_ignore.push("");
+  }
+  if (unsafely_ignore.length > 0) {
+    if (unsafely_ignore.includes("")) {
+      args.push("--unsafely-ignore-certificate-errors");
+    } else {
+      args.push(`--unsafely-ignore-certificate-errors=${unsafely_ignore.join(",")}`);
+    }
+  }
+
   if (allow_net.length > 0) {
     if (allow_net.includes("")) {
       args.push("--allow-net");
@@ -384,6 +403,7 @@ function make_run_spec(options, task = "run") {
     allow_net: options.allow_net,
     allow_run: options.allow_run,
     env_vars: options.env_vars,
+    unsafely_ignore_certificate_errors: options.unsafely_ignore_certificate_errors,
     input: options.input,
     start_time: START_TIME,
   };
@@ -440,6 +460,7 @@ Options (runtime):
                                 or './bastion/' if it exists)
   --allow-net[=host[,...]]      Allow network access (Deno runtime only)
                                 (default: none, unless 'install' is used)
+  --unsafely-ignore-certificate-errors[=host[,...]] Disable SSL certificate verification
   --curl-proxy                  Shortcut for --allow-net=get-ws-proxy.r-universe.dev:443,ws.r-universe.dev:443
   --allow-run[=bin[,...]]       Allow running subprocesses (Deno runtime only)
   --prologue=[R script]         R script evaluated before main R code
@@ -542,6 +563,7 @@ export function parse_args(args) {
     timeout: 0,
     allow_net: [],
     allow_run: [],
+    unsafely_ignore_certificate_errors: [],
     r_args: [],
     env_vars: {},
     input: null,
@@ -589,6 +611,11 @@ export function parse_args(args) {
       options.persistent = true;
     } else if (arg === "--debug") {
       options.debug = true;
+    } else if (arg === "--unsafely-ignore-certificate-errors") {
+      options.unsafely_ignore_certificate_errors.push(""); // empty string represents "allow all"
+    } else if (arg.startsWith(prefix = "--unsafely-ignore-certificate-errors=")) {
+      value = arg.slice(prefix.length);
+      options.unsafely_ignore_certificate_errors.push(...value.split(","));
     } else if (arg === "--verbose") {
       options.verbose = true;
     } else if (arg === "--no-config") {
