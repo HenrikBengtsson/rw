@@ -588,6 +588,8 @@ export function parse_args(args) {
     scope: null, // null (unset) | "local" (./.rwconfig) | "global" (~/.rwconfig)
     field: null,
     value: null,
+    install_packages: [],
+    install_docker: false,
     uninstall_packages: [],
     build_path: null,
     build_docker: false,
