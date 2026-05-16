@@ -3,6 +3,7 @@
     ".": "./index.js"
   },
   "imports": {
+    "tar-vfs-index": "npm:tar-vfs-index",
     "webr": "npm:webr"
   },
   "nodeModulesDir": "auto",

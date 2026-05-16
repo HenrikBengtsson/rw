@@ -2,6 +2,7 @@ import { WebR } from "webr";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
@@ -194,6 +195,54 @@ attach(list(install.packages = function(pkgs, ..., mount = FALSE) {
     }
 }), name = "rw_shims", warn.conflicts = FALSE)
 `;
+}
+
+/**
+ * Extract VFS metadata from a tarball buffer.
+ * Ported from webR's internal 'getVfsMetadata' logic.
+ * @param {Uint8Array} buffer - Tarball data
+ * @returns {Object} VFS metadata
+ */
+function get_vfs_metadata(buffer) {
+  let data = buffer;
+  // Decompress if gzip
+  if (data[0] === 0x1f && data[1] === 0x8b) {
+    data = zlib.gunzipSync(data);
+  }
+
+  // Try to find '.vfs-index.json' in the tarball (webR style)
+  const decoder = new TextDecoder();
+  let offset = 0;
+  while (offset + 512 <= data.byteLength) {
+    const header = data.subarray(offset, offset + 512);
+    if (header.every((b) => b === 0)) break;
+
+    const name = decoder.decode(header.subarray(0, 100)).replace(/\0+$/, "");
+    const size = parseInt(decoder.decode(header.subarray(124, 136)), 8);
+    const type = decoder.decode(header.subarray(156, 157));
+
+    if (name === ".vfs-index.json" && (type === "0" || type === "\0" || type === "")) {
+      const json_data = data.subarray(offset + 512, offset + 512 + size);
+      const metadata = JSON.parse(decoder.decode(json_data));
+      // webR expects { files: [{ filename, start, end }] }
+      // and optionally remote_package_size
+      return metadata;
+    }
+    offset += 512 * (1 + Math.ceil(size / 512));
+  }
+
+  // Try to find the VFS footer (Emscripten style)
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const magic = view.getInt32(data.byteLength - 16, true);
+  const block = view.getInt32(data.byteLength - 8, true);
+  const len = view.getInt32(data.byteLength - 4, true);
+
+  if (magic === 2003133010 && block !== 0 && len !== 0) {
+    const json_data = data.subarray(512 * block, 512 * block + len);
+    return JSON.parse(decoder.decode(json_data));
+  }
+
+  throw new Error("No VFS metadata found in tarball archive. Did you build it with 'rw build-vfs'?");
 }
 
 /**
@@ -519,16 +568,49 @@ local({
   // Mount R library if specified
   if (r_libs_user) {
     if (verbose) console.error(`${ts()}Mount R library ...`);
-    const normalized_libs = normalize_path(r_libs_user);
+    const normalized_libs = normalize_path(r_libs_user, "R library archive or directory");
     const r_libs_webr = "/host/R_LIBS_USER";
-    if (verbose) {
-      console.error(
-        `${ts()}Binding host R library '${normalized_libs}' to '${r_libs_webr}' in R (${
-          persistent ? "writable" : "read-only"
-        })`,
-      );
+    const is_tarball = normalized_libs.endsWith(".tar.gz") || normalized_libs.endsWith(".tgz");
+
+    if (is_tarball) {
+      if (verbose) {
+        console.error(
+          `${ts()}Extracting R library archive '${normalized_libs}' to '${r_libs_webr}' in R MEMFS`,
+        );
+      }
+      const data = fs.readFileSync(normalized_libs);
+      const metadata = get_vfs_metadata(data);
+      
+      // Decompress if gzip (we need the raw tar data to slice)
+      let tar_data = data;
+      if (tar_data[0] === 0x1f && tar_data[1] === 0x8b) {
+        tar_data = zlib.gunzipSync(tar_data);
+      }
+
+      await session.mkdirs(r_libs_webr);
+      
+      if (metadata && Array.isArray(metadata.files)) {
+        for (const file of metadata.files) {
+          let filename = file.filename;
+          if (filename.startsWith("./")) filename = filename.slice(2);
+
+          const target_path = path.posix.join(r_libs_webr, filename);
+          const file_content = tar_data.subarray(file.start, file.end);
+
+          if (debug) console.log(`Extracting to MEMFS: ${target_path}`);
+          await session.mkdirs(path.posix.dirname(target_path));
+          await session.webR.FS.writeFile(target_path, file_content);
+        }
+      }    } else {
+      if (verbose) {
+        console.error(
+          `${ts()}Binding host R library '${normalized_libs}' to '${r_libs_webr}' in R (${
+            persistent ? "writable" : "read-only"
+          })`,
+        );
+      }
+      await session.mount(normalized_libs, r_libs_webr, !persistent);
     }
-    await session.mount(normalized_libs, r_libs_webr);
     await session.set_lib_paths(r_libs_webr, { append: !persistent });
     if (verbose) console.error(`${ts()}Mount R library ... done`);
   }

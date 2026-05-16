@@ -189,6 +189,7 @@ Usage:
   rw [options] --persistent install --docker [dir] [dir ...]
   rw [options] --persistent uninstall [pkg] [pkg ...]
   rw build --docker [[dir]]
+  rw build-vfs [path] [[path2] ...] packages.tar.gz
   rw env list
   rw env get [field]
   rw config [--local] list
@@ -214,7 +215,8 @@ Options (runtime):
                                   shims=[shim][,[shim]] - comma-separated shims
                                   (default: runtime-opt in ./.rwconfig,
                                   or 'shims=install.packages')
-  --r-libs-user=[host-dir]      Bind R user library to host directory
+  --r-libs-user=[path]          Bind R user library to host directory or
+                                use a tarball VFS archive (.tar.gz)
                                 (read-only unless --persistent is set;
                                 default: r-libs-user in ./.rwconfig)
   --bind=[host-dir]:[rwasm-dir][:mode] Bind host directory as a webR directory
@@ -271,6 +273,9 @@ Examples:
   rw --persistent install praise
   rw --persistent --expr="message(praise::praise())"
 
+  # Use a tarball VFS archive of R packages
+  rw --r-libs-user=packages.tar.gz --expr="praise::praise()"
+
   # An R session with the R user library on host
   rw --persistent main.R
 
@@ -294,8 +299,11 @@ Examples:
   rw build --docker .
   rw build --docker path/to/mypkg
 
+  # Build a tarball VFS archive of all installed packages
+  rw build-vfs ~/R/wasm-library/4.5 packages.tar.gz
+
 Version: 0.0.408
-JS Runtime: deno 2.7.12
+JS Runtime: deno 2.7.14
 webR: 0.5.9
 License: MIT
 Author: Henrik Bengtsson

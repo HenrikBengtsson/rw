@@ -422,6 +422,7 @@ Usage:
   rw [options] --persistent install --docker [dir] [dir ...]
   rw [options] --persistent uninstall [pkg] [pkg ...]
   rw build --docker [[dir]]
+  rw build-vfs [path] [[path2] ...] packages.tar.gz
   rw env list
   rw env get [field]
   rw config [--local] list
@@ -447,7 +448,8 @@ Options (runtime):
                                   shims=[shim][,[shim]] - comma-separated shims
                                   (default: runtime-opt in ./.rwconfig,
                                   or 'shims=install.packages')
-  --r-libs-user=[host-dir]      Bind R user library to host directory
+  --r-libs-user=[path]          Bind R user library to host directory or
+                                use a tarball VFS archive (.tar.gz)
                                 (read-only unless --persistent is set;
                                 default: r-libs-user in ./.rwconfig)
   --bind=[host-dir]:[rwasm-dir][:mode] Bind host directory as a webR directory
@@ -504,6 +506,9 @@ Examples:
   rw --persistent install praise
   rw --persistent --expr="message(praise::praise())"
 
+  # Use a tarball VFS archive of R packages
+  rw --r-libs-user=packages.tar.gz --expr="praise::praise()"
+
   # An R session with the R user library on host
   rw --persistent main.R
 
@@ -526,6 +531,9 @@ Examples:
   rw build --docker .
   rw build --docker .
   rw build --docker path/to/mypkg
+
+  # Build a tarball VFS archive of all installed packages
+  rw build-vfs ~/R/wasm-library/4.5 packages.tar.gz
 
 Version: ${version}
 JS Runtime: ${
@@ -575,16 +583,16 @@ export function parse_args(args) {
   };
 
   const command = {
-    type: null, // null | "env" | "config" | "install" | "uninstall" | "build"
+    type: null, // null | "env" | "config" | "install" | "uninstall" | "build" | "build-vfs"
     action: null, // "list" | "get" | "set" | "unset"
     scope: null, // null (unset) | "local" (./.rwconfig) | "global" (~/.rwconfig)
     field: null,
     value: null,
-    install_packages: [],
-    install_docker: false,
     uninstall_packages: [],
     build_path: null,
     build_docker: false,
+    build_vfs_inputs: [],
+    build_vfs_path: null,
   };
 
   let r_script = null;
@@ -774,6 +782,8 @@ export function parse_args(args) {
           command.type = "uninstall";
         } else if (arg === "build") {
           command.type = "build";
+        } else if (arg === "build-vfs") {
+          command.type = "build-vfs";
         } else if (arg.startsWith("--")) {
           throw new Error(`Unknown option ${arg}`);
         } else {
@@ -822,10 +832,29 @@ export function parse_args(args) {
         } else {
           throw new Error(`Unexpected argument for 'rw build': ${arg}`);
         }
+      } else if (command.type === "build-vfs") {
+        command.build_vfs_inputs.push(arg);
       } else {
         if (options.r_args.length === 0) options.r_args.push("--args");
         options.r_args.push(arg);
       }
+    }
+  }
+
+  if (command.type === "build-vfs") {
+    if (command.build_vfs_inputs.length < 2) {
+      throw new Error(
+        "rw build-vfs requires at least one input path and an output path",
+      );
+    }
+    command.build_vfs_path = command.build_vfs_inputs.pop();
+
+    // Infer VFS type from extension
+    const ext = command.build_vfs_path.toLowerCase();
+    if (ext.endsWith(".tar.gz") || ext.endsWith(".tgz")) {
+      command.vfs_type = "tar-vfs";
+    } else {
+      throw new Error(`Unsupported VFS extension for '${command.build_vfs_path}'. Use .tar.gz or .tgz`);
     }
   }
 
@@ -1196,6 +1225,99 @@ async function main() {
       process.exit(code ?? 0);
     });
     return;
+  }
+
+  if (command.type === "build-vfs") {
+    if (command.build_vfs_inputs.length === 0) {
+      console.error(
+        "ERROR: 'rw build-vfs' requires at least one input directory",
+      );
+      process.exit(1);
+    }
+    if (!command.build_vfs_path) {
+      console.error(
+        "ERROR: 'rw build-vfs' requires an output filename (e.g. packages.tar.gz)",
+      );
+      process.exit(1);
+    }
+
+    const output_file = path.resolve(command.build_vfs_path);
+
+    if (command.vfs_type === "tar-vfs") {
+      if (options.verbose) {
+        console.error(
+          `Creating tarball VFS archive '${output_file}' from ${command.build_vfs_inputs.length} input directories`,
+        );
+      }
+
+      // 1. Tar all packages from all input directories
+      // Use -c (create), -z (gzip), -f (file)
+      // For each input, use -C <dir> .
+      const tar_args = ["-czf", output_file];
+      for (const input of command.build_vfs_inputs) {
+        const abs_input = path.resolve(input);
+        tar_args.push("-C", abs_input, ".");
+      }
+
+      if (options.debug) console.log("tar " + tar_args.join(" "));
+
+      const tar_proc = spawnSync("tar", tar_args, { stdio: "inherit" });
+      if (tar_proc.error) {
+        console.error("ERROR: Failed to run 'tar': " + tar_proc.error.message);
+        process.exit(1);
+      }
+      if (tar_proc.status !== 0) {
+        console.error(`ERROR: 'tar' exited with code ${tar_proc.status}`);
+        process.exit(tar_proc.status);
+      }
+
+      // 2. Embed index using tar-vfs-index
+      if (options.verbose) {
+        console.error(`Embedding VFS index into '${output_file}'`);
+      }
+
+      // Try to find tar-vfs-index binary
+      const index_bin = path.join(
+        __pkgdir,
+        "node_modules",
+        "tar-vfs-index",
+        "bin",
+        "cli.js",
+      );
+      let index_proc;
+      if (fs.existsSync(index_bin)) {
+        const index_args = [index_bin, "--append", output_file];
+        if (options.debug) console.log("node " + index_args.join(" "));
+        index_proc = spawnSync("node", index_args, { stdio: "inherit" });
+      } else {
+        // Fallback to npx if node_modules not found
+        if (options.debug) {
+          console.log(`npx tar-vfs-index --append ${output_file}`);
+        }
+        index_proc = spawnSync("npx", ["tar-vfs-index", "--append", output_file], {
+          stdio: "inherit",
+        });
+      }
+
+      if (index_proc.error) {
+        console.error(
+          "ERROR: Failed to run 'tar-vfs-index': " + index_proc.error.message,
+        );
+        process.exit(1);
+      }
+      if (index_proc.status !== 0) {
+        console.error(
+          `ERROR: 'tar-vfs-index' exited with code ${index_proc.status}`,
+        );
+        process.exit(index_proc.status);
+      }
+
+      console.log(output_file);
+      process.exit(0);
+    } else {
+      console.error(`ERROR: Unsupported VFS type: ${command.vfs_type}`);
+      process.exit(1);
+    }
   }
 
   // Validate runtime before any operation that uses it
