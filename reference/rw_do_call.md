@@ -39,7 +39,7 @@ rw_do_call(
 
   (character string) Path to an R package library on the host to mount
   in webR. The recommended path is
-  [`rw_r_libs_user()`](rw_r_libs_user.md).
+  [`rw_r_libs_user()`](https://rw.futureverse.org/reference/rw_r_libs_user.md).
 
 - binds:
 
@@ -86,7 +86,8 @@ This function works by:
 
 ## See also
 
-Internally, [`rw()`](rw.md) is used.
+Internally, [`rw()`](https://rw.futureverse.org/reference/rw.md) is
+used.
 
 ## Examples
 

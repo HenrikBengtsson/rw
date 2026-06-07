@@ -1,6 +1,8 @@
 # Source an R Script in webR
 
-A convenience wrapper around [`rw()`](rw.md) for sourcing R scripts.
+A convenience wrapper around
+[`rw()`](https://rw.futureverse.org/reference/rw.md) for sourcing R
+scripts.
 
 ## Usage
 
@@ -35,7 +37,7 @@ rw_source(
 
   (character string) Path to an R package library on the host to mount
   in webR. The recommended path is
-  [`rw_r_libs_user()`](rw_r_libs_user.md).
+  [`rw_r_libs_user()`](https://rw.futureverse.org/reference/rw_r_libs_user.md).
 
 - binds:
 
@@ -89,7 +91,7 @@ execution.
 
 ## See also
 
-[`rw()`](rw.md)
+[`rw()`](https://rw.futureverse.org/reference/rw.md)
 
 ## Examples
 

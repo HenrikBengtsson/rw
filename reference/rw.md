@@ -50,7 +50,7 @@ rw(
 
   (character string) Path to an R package library on the host to mount
   in webR. The recommended path is
-  [`rw_r_libs_user()`](rw_r_libs_user.md).
+  [`rw_r_libs_user()`](https://rw.futureverse.org/reference/rw_r_libs_user.md).
 
 - binds:
 
@@ -107,7 +107,7 @@ access:
 
 ## See also
 
-[`rw_source()`](rw_source.md)
+[`rw_source()`](https://rw.futureverse.org/reference/rw_source.md)
 
 ## Examples
 

@@ -7,39 +7,39 @@ isolated from the host system.
 
 ## Main R functions
 
-- [`rw_do_call()`](rw_do_call.md):
+- [`rw_do_call()`](https://rw.futureverse.org/reference/rw_do_call.md):
 
   Call an R function with argument in webR and return the result. Works
   similarly to [`do.call()`](https://rdrr.io/r/base/do.call.html).
 
 ## Low-level functions for calling 'rw'
 
-- [`rw()`](rw.md):
+- [`rw()`](https://rw.futureverse.org/reference/rw.md):
 
   Run R code with full control over prologue/epilogue, bindings, and
   sandboxing
 
-- [`rw_source()`](rw_source.md):
+- [`rw_source()`](https://rw.futureverse.org/reference/rw_source.md):
 
   Source R scripts
 
 ## Utility functions
 
-- [`rw_r_libs_user()`](rw_r_libs_user.md):
+- [`rw_r_libs_user()`](https://rw.futureverse.org/reference/rw_r_libs_user.md):
 
   Get the R package library path for webR
 
-- [`rw_version()`](version-functions.md),
-  [`rw_webr_version()`](version-functions.md),
-  [`rw_r_version()`](version-functions.md):
+- [`rw_version()`](https://rw.futureverse.org/reference/version-functions.md),
+  [`rw_webr_version()`](https://rw.futureverse.org/reference/version-functions.md),
+  [`rw_r_version()`](https://rw.futureverse.org/reference/version-functions.md):
 
   Version information
 
-- [`rw_config()`](rw_config.md):
+- [`rw_config()`](https://rw.futureverse.org/reference/rw_config.md):
 
   Get detailed webR configuration
 
-- [`rw_available()`](rw_available.md):
+- [`rw_available()`](https://rw.futureverse.org/reference/rw_available.md):
 
   Check if the `rw` CLI is available
 
