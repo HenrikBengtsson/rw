@@ -36,12 +36,12 @@ if (typeof globalThis.Deno !== "undefined") {
   };
 }
 
-import {
+const {
   get_r_info,
   get_r_version,
   get_webr_version,
   run,
-} from "./rw_session.js";
+} = await import("./rw_session.js");
 
 async function main() {
   // Read the entire work spec from stdin

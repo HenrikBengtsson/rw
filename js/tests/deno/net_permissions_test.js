@@ -244,6 +244,22 @@ Deno.test({
   },
 });
 
+Deno.test({
+  name: "readLines('https://...') with --allow-net succeeds",
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const { code, stdout, stderr } = await rw([
+      "--no-config",
+      "--allow-net",
+      "--expr=x <- readLines('https://www.r-project.org')",
+      "--expr=cat(length(x) > 0)",
+    ]);
+    assertEquals(code, 0, `Expected exit code 0, got ${code}. Stderr: ${stderr}`);
+    assert(stdout.includes("TRUE"), `Expected TRUE in stdout, got: ${stdout}`);
+  },
+});
+
 // Cleanup TEST_LIBS_USER at the end
 Deno.test({
   name: "Cleanup",

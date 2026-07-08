@@ -270,4 +270,13 @@ describe("rw --help examples", () => {
     assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
     assert.ok(stdout.includes("TRUE"), `Expected [1] TRUE in stdout, got: ${stdout}`);
   });
+
+  it('readLines("https://...") succeeds', () => {
+    const { code, stdout, stderr } = rw([
+      "--expr=x <- readLines(\"https://www.r-project.org\")",
+      "--expr=cat(length(x) > 0)",
+    ]);
+    assert.equal(code, 0, `exit ${code}\nstderr: ${stderr}`);
+    assert.ok(stdout.includes("TRUE"), `Expected TRUE in stdout, got: ${stdout}`);
+  });
 });

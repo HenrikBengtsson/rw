@@ -512,6 +512,9 @@ Examples:
   # An R session with the R user library on host
   rw --persistent main.R
 
+  # Access a website
+  rw --allow-net --expr='readLines("https://www.r-project.org")'
+
   # Evaluate untrusted R code in a runtime, with data passed in
   # and out via a bastion folder accessible only to prologue/epilogue
   mkdir -p bastion
